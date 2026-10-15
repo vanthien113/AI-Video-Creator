@@ -1,0 +1,23 @@
+# Cách tìm phần tử trên TikTok Studio, trang tải video (khảo sát 2026-10-15, giao diện tiếng Anh).
+# TikTok đổi giao diện thì sửa file này, không cần sửa code. Cú pháp giống flow-selectors.yaml.
+# Tool chỉ bấm "Save draft" (data-e2e=save_draft_button), không bao giờ bấm "Post".
+
+file_input: {css: "input[type=file][accept='video/*']"}
+description_editor: {css: ".public-DraftEditor-content[contenteditable=true]"}
+save_draft_button: {css: "[data-e2e=save_draft_button]"}
+show_more: {text: "Show more", exact: true}
+ai_label_confirm: {role: button, name: "Turn on", exact: true}
+# Bấm Save draft khi "Content check lite" (khoảng 10 phút) chưa xong thì TikTok hỏi
+# "Save draft? The copyright check is still running..." → tool chọn "Save anyway".
+save_anyway_button: {role: button, name: "Save anyway", exact: true}
+
+# Hộp thoại giới thiệu tính năng mới, tool tự bấm để đóng
+dismiss_buttons:
+  - {role: button, name: "Got it", exact: true}
+
+# Chữ trên trang (biểu thức chính quy, không phân biệt hoa thường)
+texts:
+  login_page: "log in to tiktok|đăng nhập vào tiktok"
+  upload_done: "\\buploaded\\b|đã tải lên"
+  ai_label_row: "AI-generated content|nội dung do AI tạo"
+  draft_saved: "saved to drafts|draft saved|đã lưu vào bản nháp|đã lưu bản nháp"

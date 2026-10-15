@@ -1,0 +1,65 @@
+# Cách tìm phần tử trên Google Flow (khảo sát 2026-10-15 trên flow.google.com).
+# Google đổi giao diện thì sửa file này, không cần sửa code. Kiểm tra: cd backend && ../.venv/bin/python -m app.flow.check_selectors
+#
+# Mỗi mục là một trong các dạng:
+#   {role: button, name: "Tên hiển thị"}       name khớp một phần, không phân biệt hoa thường; thêm exact: true để khớp đúng
+#   {css: "img[alt='...']"}
+#   {text: "đoạn chữ"}
+# "{value}" được thay bằng giá trị lấy từ config.yaml (tỉ lệ khung hình, mô hình, số video).
+
+home_url: https://flow.google.com/
+
+new_project_button: {role: button, name: "New project"}
+# Hộp thoại giới thiệu tính năng mới, tool tự bấm để đóng
+dismiss_buttons:
+  - {role: button, name: "Get started", exact: true}
+  - {role: button, name: "Got it", exact: true}
+  - {role: button, name: "Dismiss", exact: true}
+
+prompt_box: {role: textbox, name: "What do you want to create?"}
+generate_button: {role: button, name: "Start generation"}
+
+# Nguyên liệu (ảnh sản phẩm)
+add_ingredient_button: {role: button, name: "Add ingredients to the prompt box"}
+upload_media_button: {role: button, name: "Upload media"}
+rights_agree_button: {role: button, name: "I agree", exact: true}
+asset_option: {role: option}
+add_to_prompt_button: {role: button, name: "Add to prompt", exact: true}
+ingredient_in_prompt: {css: "img[alt='Ingredient image']"}
+ingredient_remove_button: {role: button, name: "Ingredient", exact: true}
+
+# Chế độ Agent (Flow đổi giao diện 2026-10-15): prompt gửi cho trợ lý, trợ lý hỏi
+# "Would you like me to kick off this 1 video generation, costing 15 credits?" rồi chờ duyệt.
+# Độ phân giải và thời lượng không còn là thiết lập: tool ghi vào câu yêu cầu.
+agent_new_session_button: {role: button, name: "Start new session", exact: true}
+agent_settings_button: {css: ".agent-footer-actions button[aria-label='Settings']"}
+agent_confirm_always: {text: "Always", exact: true}
+# Phần "Video generation default": nhóm tỉ lệ chỉ có 16:9 và 9:16 (nhóm của ảnh có thêm 4:3);
+# nhóm số lượng của video là nhóm "x1..x4" cuối cùng.
+agent_video_aspect_group: {css: "[role=radiogroup]:has-text('9:16'):not(:has-text('4:3'))"}
+agent_count_group: {css: "[role=radiogroup]:has-text('x4')"}
+agent_aspect_radio: {role: radio, name: "{value}"}
+agent_count_radio: {role: radio, name: "x{value}", exact: true}
+agent_video_model_button: {role: button, name: "Video generation default model"}
+agent_model_menu_item: {role: menuitem, name: "{value}", exact: true}
+agent_settings_save: {role: button, name: "Save", exact: true}
+# Ba lựa chọn duyệt kế hoạch; sau khi chọn chúng bị khoá (aria-disabled="true").
+agent_approve_option: {css: "flow-agent-panel [role=radio][aria-label='Approve']:not([aria-disabled='true'])"}
+agent_reject_option: {css: "flow-agent-panel [role=radio][aria-label='Reject']:not([aria-disabled='true'])"}
+agent_busy: {role: button, name: "Stop", exact: true}
+agent_panel: {css: "flow-agent-panel"}
+
+# Kết quả (quan sát lần chạy thật 2026-10-15): mỗi video là một ô <flow-grid-tile-container>
+# chứa <flow-video-tile> với ảnh thu nhỏ; menu "More options" → "Download" → chọn chất lượng.
+result_tile: {css: "flow-grid-tile-container"}
+result_video_thumb: {css: "flow-video-tile img"}
+tile_more_button: {role: button, name: "More options"}
+download_menu_item: {role: menuitem, name: "Download"}
+download_option_1080p: {role: menuitem, name: "1080p"}
+download_option_original: {role: menuitem, name: "Original size"}
+
+# Chữ trên trang báo lỗi (biểu thức chính quy, không phân biệt hoa thường)
+error_patterns:
+  out_of_credits: "not enough credits|out of credits|insufficient credits|hết credit"
+  policy_blocked: "violat|policy|safety|prohibited|couldn.t generate this"
+  generation_failed: "generation failed|failed to generate|something went wrong"

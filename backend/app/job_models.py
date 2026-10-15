@@ -1,0 +1,109 @@
+"""Job state schema shared by the store, the pipeline runner and the API."""
+
+from datetime import datetime
+from enum import Enum
+
+from pydantic import BaseModel, Field
+
+# "fetch_source" only runs for jobs created from a TikTok Shop link; upload jobs start at "cutout".
+# "send_telegram" only does work for jobs that came from Telegram; for the others it is a no-op.
+# "tiktok_draft" saves the video as a TikTok Studio draft (never posts) when tiktok.save_draft is on.
+STEPS = ["fetch_source", "cutout", "upscale", "prompt", "flow_generate", "flow_download", "enhance", "export",
+         "send_telegram", "tiktok_draft"]
+FIRST_UPLOAD_STEP = "cutout"
+
+# A gate pauses the job right after the step it is keyed by.
+# "pick_image" always waits for the user; the review gates can be set to auto per job.
+PICK_GATE = "pick_image"
+GATE_AFTER_STEP = {"fetch_source": PICK_GATE, "cutout": "cutout", "prompt": "prompt", "flow_download": "flow_video"}
+GATES = ["cutout", "prompt", "flow_video"]
+
+FLOW_STEPS = {"flow_generate", "flow_download"}
+
+
+class JobStatus(str, Enum):
+    queued = "queued"
+    running = "running"
+    awaiting_review = "awaiting_review"
+    failed = "failed"
+    done = "done"
+    cancelled = "cancelled"
+
+
+class FlowState(BaseModel):
+    project_url: str | None = None
+    submitted_at: str | None = None
+    known_videos: list[str] = Field(default_factory=list)
+    video_ref: str | None = None
+    resume: bool = False  # "Tôi đã sửa tay, tiếp tục": watch for the result instead of submitting
+
+
+class SourceInfo(BaseModel):
+    """What the fetch_source step read from the product page."""
+
+    url: str
+    title: str = ""
+    description: str = ""
+    candidates: list[str] = Field(default_factory=list)  # file names in <job>/candidates/
+
+
+class TelegramOrigin(BaseModel):
+    """Where a link came from, so the finished video can be sent back as a reply."""
+
+    chat_id: int
+    message_id: int | None = None
+    preview_sent: bool = False  # parts already delivered: a retry never sends duplicates
+    file_sent: bool = False
+    title_sent: bool = False
+
+
+class TikTokDraftState(BaseModel):
+    saved_at: str | None = None  # draft saved: a retry only re-sends the Telegram note
+    notified: bool = False
+
+
+class JobError(BaseModel):
+    step: str
+    reason: str
+    screenshot: str | None = None  # file name relative to the job dir
+
+
+class StepRecord(BaseModel):
+    step: str
+    started_at: str
+    finished_at: str | None = None
+    outcome: str = "running"  # running | ok | failed | cancelled
+
+
+class JobState(BaseModel):
+    id: str
+    name: str
+    input_file: str  # "" until a link job's image has been picked
+    extra_ingredients: list[str] = Field(default_factory=list)  # more photos for Flow, e.g. "ingredient-1.jpg"
+    created_at: str
+    status: JobStatus = JobStatus.queued
+    current_step: str = FIRST_UPLOAD_STEP
+    gate: str | None = None
+    auto_gates: dict[str, bool] = Field(default_factory=lambda: {g: False for g in GATES})
+    note: str = ""
+    product_info: str = ""  # title + description from the product page, editable at the pick gate
+    source: SourceInfo | None = None
+    telegram: TelegramOrigin | None = None
+    tiktok: TikTokDraftState = Field(default_factory=TikTokDraftState)
+    feedback: str = ""
+    cutout_model_index: int = 0
+    progress: float = 0
+    message: str = ""
+    history: list[StepRecord] = Field(default_factory=list)
+    flow: FlowState = Field(default_factory=FlowState)
+    error: JobError | None = None
+    export_path: str | None = None
+
+
+def now_iso() -> str:
+    return datetime.now().isoformat(timespec="seconds")
+
+
+def next_step(step: str) -> str | None:
+    index = STEPS.index(step)
+    return STEPS[index + 1] if index + 1 < len(STEPS) else None

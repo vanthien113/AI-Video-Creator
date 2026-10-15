@@ -1,0 +1,61 @@
+# Cấu hình AI Video Creator. Đường dẫn tương đối tính từ thư mục dự án.
+
+server:
+  port: 8765
+
+paths:
+  export_dir: ~/Movies/AI-Video-Creator
+  rules_file: ./ad-rules.md
+  jobs_dir: ./jobs
+  chrome_profile: ./chrome-profile
+
+image:
+  long_edge: 2048            # cạnh dài của ảnh gửi lên Flow
+  background: white          # white | transparent
+  padding: 0.08              # lề quanh sản phẩm, tính theo cạnh dài
+  cutout_models:             # nút "Thử mô hình khác" đi lần lượt theo danh sách này
+    - birefnet-general
+    - isnet-general-use
+
+prompt:
+  timeout_sec: 180
+  model: ""                  # trống = mô hình mặc định của Claude Code
+
+flow:
+  project_url: ""            # trống = mỗi job tạo một dự án Flow mới
+  # Tên đúng như trên Flow. Giá 1 video 9:16 x1 (đo 2026-10-15):
+  #   Veo 3.1 - Lite 10 · Veo 3.1 - Fast 20 · Veo 3.1 - Quality 100 credit (720p, 8s cố định)
+  #   Omni 1.1 Flash: 360p 4–7 credit, 720p 7/10/12/15 credit cho 4/6/8/10s
+  model: "Omni 1.1 Flash"
+  aspect_ratio: "9:16"       # 9:16 | 16:9
+  resolution: "720p"         # chỉ Omni: 360p | 720p (trống = mặc định của mô hình). Tool ghi vào câu yêu cầu gửi Agent
+  duration: "10s"            # chỉ Omni: 4s | 6s | 8s | 10s — 720p 10s = 15 credit. Tool ghi vào câu yêu cầu gửi Agent
+  outputs: 1                 # số video mỗi lượt sinh
+  max_ingredients: 3         # số ảnh tối đa chọn cho 1 video (ảnh chính + ảnh tham khảo), đã thử Flow nhận 3
+  max_credits: 20            # Agent định tiêu nhiều hơn mức này thì tool bấm Reject (Veo 3.1 - Quality cần ≥ 100)
+  download: original         # original = bản gốc 720p của Flow (tool tự nâng lên sau) | 1080p
+  timeout_sec: 600
+  cdp_port: 9222
+  chrome_app: /Applications/Google Chrome.app/Contents/MacOS/Google Chrome
+
+video:
+  fps: 60
+  long_edge: 2560             # cạnh dài video xuất: 2560 = 2K (1440×2560), 3840 = 4K, 1920 = 1080p
+  rife_model: rife-v4.6
+  bitrate: 24M               # 2K 60fps; 10 giây ≈ 30MB, dưới giới hạn 50MB của Telegram (4K nên dùng 45M)
+  min_free_gb: 3
+
+review:                      # mặc định cho ô "tự động chạy tiếp": manual | auto
+  cutout: manual
+  prompt: manual
+  flow_video: manual
+
+telegram:                    # nhận link TikTok Shop gửi từ điện thoại
+  enabled: true              # token bot đặt trong file .env ở thư mục dự án: TELEGRAM_BOT_TOKEN=...
+  allowed_user_ids: []       # ID Telegram được phép gửi link; nên ghi vào .env (TELEGRAM_ALLOWED_USER_IDS) để không lên git
+  auto_review: true          # job từ link: chọn ảnh xong tự chạy thẳng, không dừng duyệt
+
+tiktok:                      # sau khi xuất file: tải lên TikTok Studio và LƯU NHÁP (không bao giờ bấm Post)
+  save_draft: false          # TẠM TẮT. Bật lại: true (Chrome của tool phải đăng nhập TikTok trước)
+  ai_generated_label: true   # bật nhãn "AI-generated content"; TikTok có thể gỡ video AI trông như thật mà không gắn nhãn
+  timeout_sec: 600           # thời gian tối đa chờ tải video 4K lên
