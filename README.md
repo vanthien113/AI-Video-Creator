@@ -2,6 +2,13 @@
 
 Gửi một link sản phẩm TikTok Shop từ điện thoại, nhận lại clip quảng cáo dọc 9:16, 2K 60fps, có người mẫu dùng sản phẩm và câu hook mở đầu. Mọi bước xử lý ảnh và video chạy trên máy Mac; chỉ phần viết prompt (Claude Code) và sinh video (Google Flow) dùng dịch vụ bên ngoài.
 
+<p align="center">
+  <img src="docs/images/web-ui.jpg" alt="Giao diện tool trên Mac: danh sách job bên trái, job đang ở bước Flow sinh với thanh tiến trình từng bước bên phải" width="66%">
+  &nbsp;
+  <img src="docs/images/telegram-result.jpg" alt="Bot Telegram trả video và tên sản phẩm ngay dưới link sản phẩm đã gửi" width="28%">
+</p>
+<p align="center"><em>Trái: giao diện trên Mac, theo dõi từng bước của job. Phải: gửi link cho bot Telegram, video xong được trả về ngay dưới tin đó.</em></p>
+
 ## Luồng xử lý
 
 ```
