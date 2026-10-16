@@ -21,9 +21,11 @@ Các quy tắc bám theo hướng dẫn nội dung của TikTok Shop: có ngư�
 - Sản phẩm luôn rõ nét, đúng như ảnh. Viết rõ: "keep the product's exact shape, colors, logo and printed text unchanged".
 
 ## Cảnh quay
-- 2–3 cảnh nối nhau bằng cắt cảnh gọn, mỗi cảnh một góc máy và cỡ cảnh khác nhau. Ví dụ: cận cảnh sản phẩm lúc hook → toàn thân khi đang dùng → cận chi tiết chất liệu.
-- Luôn có chuyển động: người đi lại, xoay sản phẩm, máy dolly hoặc orbit. Không có cảnh đứng yên, không lặp lại.
-- Bối cảnh đời thường nhưng sạch đẹp, hợp với sản phẩm (ví dụ: giày → vỉa hè quán cà phê, văn phòng; mỹ phẩm → bàn trang điểm). Ánh sáng tự nhiên, mềm.
+- Tự nghĩ kịch bản riêng cho sản phẩm này, không theo khuôn nào: bối cảnh, thứ tự cảnh, hành động của người mẫu, cách máy quay chuyển động và ánh sáng đều chọn theo đúng loại sản phẩm, phong cách và người sẽ mua nó.
+- 2–3 cảnh nối nhau bằng cắt cảnh gọn, mỗi cảnh một góc máy và cỡ cảnh khác nhau.
+- Luôn có chuyển động (người, sản phẩm hoặc máy quay). Không có cảnh đứng yên, không lặp lại.
+- Bối cảnh đời thường, sạch đẹp, hợp với sản phẩm.
+- Không cho người mẫu xoay người 360 độ
 
 ## Âm thanh
 - Lời nói tiếng Việt rõ ràng, giọng tự nhiên, thân thiện. Nhạc nền nhẹ, nhỏ hơn giọng nói.
