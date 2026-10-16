@@ -105,7 +105,7 @@ cd backend && ../.venv/bin/python -m app.sources.check_product_page "<link TikTo
 | `config.yaml` | Thư mục xuất, mô hình Flow, tỉ lệ khung hình, độ phân giải và thời lượng, số video mỗi lượt, số ảnh tối đa, mức credit tối đa, chất lượng tải, fps/độ phân giải xuất, mặc định các ô tự động, Telegram, lưu nháp TikTok |
 | `.env` | Token bot và ID Telegram được phép (bí mật, không đưa lên git; mẫu ở `.env.example`) |
 | `ad-rules.md` | Quy tắc viết prompt quảng cáo (gửi nguyên văn cho Claude) |
-| `assets/logo.png` | Logo của bạn đè lên dấu ✦ của Flow (PNG nền trong suốt, tự đặt vào; thư mục `assets/` không lên git). Vị trí và cỡ nằm trong mục `logo` của `config.yaml`, đo sẵn cho video 9:16; không có logo thì đặt `logo.enabled: false` |
+| `assets/logo.png` | Logo của bạn đè lên dấu ✦ của Flow (PNG nền trong suốt; thay bằng logo của bạn nếu dùng repo này). Vị trí và cỡ nằm trong mục `logo` của `config.yaml`, đo sẵn cho video 9:16; không có logo thì đặt `logo.enabled: false` |
 | `flow-selectors.yaml` | Cách tìm nút bấm trên Flow. Google đổi giao diện thì sửa ở đây |
 | `tiktok-selectors.yaml` | Cách tìm nút bấm trên TikTok Studio. TikTok đổi giao diện thì sửa ở đây |
 

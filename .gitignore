@@ -24,5 +24,3 @@ frontend/dist/
 # local tooling
 .claude/
 
-# your own logo (logo.file in config.yaml) stays on this Mac
-assets/
