@@ -4,6 +4,7 @@ from .cutout_step import run_cutout
 from .enhance_video_step import run_enhance
 from .export_step import run_export
 from .fetch_product_step import run_fetch_product
+from .hashtags_step import run_hashtags
 from .flow_steps import run_flow_download, run_flow_generate
 from .prompt_step import run_prompt
 from .send_telegram_step import run_send_telegram
@@ -22,6 +23,7 @@ def build_steps() -> dict[str, StepFn]:
         "flow_download": run_flow_download,
         "enhance": run_enhance,
         "export": run_export,
+        "hashtags": run_hashtags,
         "send_telegram": run_send_telegram,
         "tiktok_draft": run_tiktok_draft,
     }

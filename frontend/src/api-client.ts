@@ -47,8 +47,8 @@ export interface FlowStatus {
 }
 
 export const STEPS = [
-  "fetch_source", "cutout", "upscale", "prompt", "flow_generate", "flow_download", "enhance", "export", "send_telegram",
-  "tiktok_draft",
+  "fetch_source", "cutout", "upscale", "prompt", "flow_generate", "flow_download", "enhance", "export", "hashtags",
+  "send_telegram", "tiktok_draft",
 ];
 /** Only link jobs read TikTok, and only Telegram jobs send the result back. */
 export const stepsFor = (job: Job) =>
@@ -62,6 +62,7 @@ export const STEP_LABELS: Record<string, string> = {
   flow_download: "Tải video",
   enhance: "Nâng 60fps",
   export: "Xuất file",
+  hashtags: "Hashtag",
   send_telegram: "Gửi Telegram",
   tiktok_draft: "Lưu nháp TikTok",
 };

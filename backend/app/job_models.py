@@ -8,8 +8,9 @@ from pydantic import BaseModel, Field
 # "fetch_source" only runs for jobs created from a TikTok Shop link; upload jobs start at "cutout".
 # "send_telegram" only does work for jobs that came from Telegram; for the others it is a no-op.
 # "tiktok_draft" saves the video as a TikTok Studio draft (never posts) when tiktok.save_draft is on.
+# "hashtags" asks Google's AI Mode (Claude as fallback) for 3 hashtags; it never fails the job.
 STEPS = ["fetch_source", "cutout", "upscale", "prompt", "flow_generate", "flow_download", "enhance", "export",
-         "send_telegram", "tiktok_draft"]
+         "hashtags", "send_telegram", "tiktok_draft"]
 FIRST_UPLOAD_STEP = "cutout"
 
 # A gate pauses the job right after the step it is keyed by.
@@ -98,6 +99,8 @@ class JobState(BaseModel):
     product_info: str = ""  # title + description from the product page, editable at the pick gate
     source: SourceInfo | None = None
     telegram: TelegramOrigin | None = None
+    hashtags: list[str] = Field(default_factory=list)  # sent after the title on Telegram
+    hashtags_source: str = ""  # "google" | "claude" | "" (none found)
     status_message: TelegramMessageRef | None = None  # the one Telegram message edited as the job moves on
     tiktok: TikTokDraftState = Field(default_factory=TikTokDraftState)
     feedback: str = ""

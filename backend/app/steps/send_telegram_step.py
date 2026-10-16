@@ -75,7 +75,8 @@ def run_send_telegram(ctx: JobContext) -> None:
 
         title = ctx.job.source.title if ctx.job.source else ""
         if title and not origin.title_sent:
-            api.send_message(origin.chat_id, title, reply_to=origin.message_id)  # bare title: easy to copy
+            text = "\n".join([title, " ".join(ctx.job.hashtags)]) if ctx.job.hashtags else title
+            api.send_message(origin.chat_id, text, reply_to=origin.message_id)  # title + hashtags only: easy to copy
             ctx.update_job(lambda j: setattr(j.telegram, "title_sent", True))
     except TelegramApiError as exc:
         raise StepFailure(f"Gửi Telegram lỗi: {exc}. Video đã xuất trên Mac; bấm 'Thử lại' để gửi lại.") from exc
