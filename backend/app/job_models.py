@@ -55,6 +55,15 @@ class TelegramOrigin(BaseModel):
     preview_sent: bool = False  # parts already delivered: a retry never sends duplicates
     file_sent: bool = False
     title_sent: bool = False
+    # Photo picker sent to Telegram at the pick gate (numbered collage + buttons).
+    pick_token: str | None = None       # short id carried in the button data (Telegram allows 64 bytes)
+    pick_message_id: int | None = None
+    pick_selection: list[str] = Field(default_factory=list)  # candidate file names, main image first
+
+
+class TelegramMessageRef(BaseModel):
+    chat_id: int
+    message_id: int
 
 
 class TikTokDraftState(BaseModel):
@@ -89,6 +98,7 @@ class JobState(BaseModel):
     product_info: str = ""  # title + description from the product page, editable at the pick gate
     source: SourceInfo | None = None
     telegram: TelegramOrigin | None = None
+    status_message: TelegramMessageRef | None = None  # the one Telegram message edited as the job moves on
     tiktok: TikTokDraftState = Field(default_factory=TikTokDraftState)
     feedback: str = ""
     cutout_model_index: int = 0

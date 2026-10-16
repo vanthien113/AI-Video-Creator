@@ -75,6 +75,23 @@ class VideoConfig(BaseModel):
         return {3840: "4K", 2560: "2K", 1920: "1080p", 1280: "720p"}.get(self.long_edge, f"{self.long_edge}p")
 
 
+class LogoConfig(BaseModel):
+    """Our logo over Flow's ✦ mark, placed as fractions of the frame so it fits any output size.
+    Defaults measured on five 720×1280 Flow downloads (2026-10-16): the mark is 48×48 px centred at
+    (599.5, 1159.5); a 60 px circle there covers it with a little margin."""
+
+    enabled: bool = False
+    file: Path = Path("assets/logo.png")
+    center_x: float = Field(0.8326, gt=0, lt=1)  # 599.5 / 720
+    center_y: float = Field(0.9059, gt=0, lt=1)  # 1159.5 / 1280
+    width: float = Field(0.0833, gt=0, lt=1)     # logo diameter: 60 / 720 of the frame width
+
+    @field_validator("file", mode="before")
+    @classmethod
+    def _resolve(cls, value):
+        return resolve_path(value)
+
+
 class ReviewConfig(BaseModel):
     cutout: ReviewMode = "manual"
     prompt: ReviewMode = "manual"
@@ -117,6 +134,7 @@ class AppConfig(BaseModel):
     review: ReviewConfig = ReviewConfig()
     telegram: TelegramConfig = TelegramConfig()
     tiktok: TikTokConfig = TikTokConfig()
+    logo: LogoConfig = LogoConfig()
 
 
 def load_dotenv(path: Path = ROOT / ".env") -> None:

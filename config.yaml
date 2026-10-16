@@ -59,3 +59,12 @@ tiktok:                      # sau khi xuất file: tải lên TikTok Studio và
   save_draft: false          # TẠM TẮT. Bật lại: true (Chrome của tool phải đăng nhập TikTok trước)
   ai_generated_label: true   # bật nhãn "AI-generated content"; TikTok có thể gỡ video AI trông như thật mà không gắn nhãn
   timeout_sec: 600           # thời gian tối đa chờ tải video 4K lên
+
+logo:                        # đè logo của bạn lên dấu ✦ của Flow (góc dưới phải) khi xuất video
+  enabled: true              # false = giữ nguyên video như Flow trả về
+  file: assets/logo.png      # PNG nền trong suốt
+  # Đo trên 5 video 720×1280 (9:16) tải từ Flow ngày 2026-10-16: dấu ✦ 48×48px, tâm (599.5, 1159.5).
+  # Tính theo tỉ lệ khung hình nên đúng với mọi độ phân giải xuất (2K: logo 120px tại x=1139, y=2259).
+  center_x: 0.8326           # tâm logo theo chiều ngang = 599.5 / 720
+  center_y: 0.9059           # tâm logo theo chiều dọc  = 1159.5 / 1280
+  width: 0.0833              # đường kính logo = 60 / 720 chiều rộng khung (che kín dấu ✦ 48px, dư viền)

@@ -38,20 +38,34 @@ def preview_command(src: Path, out: Path, size: tuple[int, int]) -> list[str]:
     ]
 
 
+def logo_box(logo, size: tuple[int, int]) -> tuple[int, int, int]:
+    """(x, y, side) in output pixels for a LogoConfig; side is even so the encoder is happy."""
+    width, height = size
+    side = round(logo.width * width / 2) * 2
+    return round(logo.center_x * width - side / 2), round(logo.center_y * height - side / 2), side
+
+
 def encode_command(
     frames_dir: Path, audio_src: Path, has_audio: bool, fps: int,
     size: tuple[int, int], bitrate: str, out: Path,
+    logo: tuple[Path, int, int, int] | None = None,
 ) -> list[str]:
+    """`logo` = (png, x, y, side): overlaid after scaling and sharpening, so the logo itself stays crisp."""
     width, height = size
     args = ["ffmpeg", "-y", "-v", "error", "-progress", "pipe:1", "-framerate", str(fps),
             "-i", str(frames_dir / FRAME_PATTERN)]
     if has_audio:
         args += ["-i", str(audio_src)]
-    args += [
-        "-map", "0:v:0",
-        "-vf", f"scale={width}:{height}:flags=lanczos,unsharp=5:5:0.5:5:5:0.0,format=yuv420p",
-        "-c:v", "hevc_videotoolbox", "-b:v", bitrate, "-tag:v", "hvc1", "-r", str(fps),
-    ]
+    video = f"scale={width}:{height}:flags=lanczos,unsharp=5:5:0.5:5:5:0.0"
+    if logo:
+        png, x, y, side = logo
+        args += ["-i", str(png)]
+        index = 2 if has_audio else 1
+        args += ["-filter_complex", f"[0:v]{video}[base];[{index}:v]scale={side}:{side}:flags=lanczos[logo];"
+                                    f"[base][logo]overlay={x}:{y},format=yuv420p[v]", "-map", "[v]"]
+    else:
+        args += ["-map", "0:v:0", "-vf", f"{video},format=yuv420p"]
+    args += ["-c:v", "hevc_videotoolbox", "-b:v", bitrate, "-tag:v", "hvc1", "-r", str(fps)]
     if has_audio:
         args += ["-map", "1:a:0", "-c:a", "copy", "-shortest"]
     args += ["-movflags", "+faststart", str(out)]

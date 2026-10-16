@@ -1,15 +1,22 @@
 """Step 0 (link jobs only): read the TikTok Shop page and save candidate product images."""
 
 import shutil
+from dataclasses import replace
 
-from ..flow.cdp_connection import BrowserNotRunning, browser_context, capture_page_error
+from ..flow.cdp_connection import BrowserNotRunning, browser_context, capture_page_error, new_tab
 from ..job_models import JobState
 from ..job_store import slugify
 from ..mac_notification import notify
 from ..sources.product_page_reader import SourceError, download_images, read_product_page
+from ..telegram.telegram_api import TelegramApi, TelegramApiError
+from ..telegram.telegram_pick import send_picker
 from .step_types import JobContext, StepFailure
 
 MAX_PRODUCT_INFO = 800
+
+
+def make_api(token: str) -> TelegramApi:  # replaced in tests
+    return TelegramApi(token)
 
 
 def run_fetch_product(ctx: JobContext) -> None:
@@ -27,7 +34,7 @@ def run_fetch_product(ctx: JobContext) -> None:
     shutil.rmtree(candidates_dir, ignore_errors=True)
     try:
         with browser_context(ctx.config.flow.cdp_port) as context:
-            page = context.new_page()  # own tab: never disturb the Flow tab
+            page = new_tab(context)  # own tab: never disturb the Flow tab
             try:
                 ctx.report(0.1, "Mở trang sản phẩm TikTok")
                 product = read_product_page(page, source.url)
@@ -54,6 +61,12 @@ def run_fetch_product(ctx: JobContext) -> None:
         if product.title:
             j.name = slugify(product.title)
 
-    ctx.update_job(save)
+    job = ctx.update_job(save)
     notify("AI Video Creator", f"Chờ chọn ảnh: {product.title or 'sản phẩm TikTok'}")
+    token = ctx.config.telegram.bot_token
+    if job.telegram and token:
+        try:
+            send_picker(replace(ctx, job=job), make_api(token))
+        except (TelegramApiError, OSError) as exc:
+            ctx.log(f"fetch: không gửi được ảnh chọn lên Telegram ({exc}); chọn trên giao diện")
     ctx.report(1, f"Đã lấy {len(names)} ảnh")

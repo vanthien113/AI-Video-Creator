@@ -17,6 +17,7 @@ from .link_job_actions import LinkJobActions
 from .pipeline_runner import PipelineRunner
 from .steps.step_registry import build_steps
 from .telegram.telegram_listener import TelegramListener
+from .telegram.telegram_notify import StatusNotifier, failure_notifier
 from .telegram.telegram_setup import start_telegram
 
 FRONTEND_DIST = ROOT / "frontend" / "dist"
@@ -49,6 +50,9 @@ def create_app(config: AppConfig | None = None, steps=None, start_worker: bool =
         bus.bind_loop(asyncio.get_running_loop())
         runner.recover()
         if start_worker:
+            if config.telegram.enabled:
+                runner.on_failure = failure_notifier(config, store.job_dir)
+                runner.on_change = StatusNotifier(config, store)
             runner.start()
             services.telegram = start_telegram(config, services.actions)
         yield

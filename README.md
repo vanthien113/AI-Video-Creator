@@ -18,12 +18,12 @@ Telegram / giao diện ─▶ Đọc TikTok ─▶ Chọn ảnh ─▶ Tách n�
 
 1. **Nhận đầu vào.** Gửi link TikTok Shop cho bot Telegram, hoặc dán link / kéo ảnh vào giao diện `http://127.0.0.1:8765`.
 2. **Đọc trang sản phẩm** trong Chrome riêng của tool: lấy tên, mô tả và toàn bộ ảnh sản phẩm.
-3. **Chọn ảnh** trên giao diện: 1 đến 3 ảnh cho một video. Ảnh bấm đầu tiên là ảnh chính; các ảnh sau (góc khác, người mẫu mang thử...) đi kèm làm tham khảo.
+3. **Chọn ảnh** trên Telegram (bấm nút số dưới ảnh ghép) hoặc trên giao diện: 1 đến 3 ảnh cho một video. Ảnh bấm đầu tiên là ảnh chính; các ảnh sau (góc khác, người mẫu mang thử...) đi kèm làm tham khảo.
 4. **Tách nền và upscale** ảnh chính (rembg BiRefNet, Real-ESRGAN lên 2K). *Điểm duyệt 1.*
 5. **Viết prompt** bằng Claude Code (`claude -p`) từ các ảnh, thông tin sản phẩm và quy tắc trong `ad-rules.md`: câu hook tiếng Việt ở 2 giây đầu, người mẫu dùng sản phẩm, 2–3 góc quay. *Điểm duyệt 2.*
 6. **Sinh video trên Google Flow, chế độ Agent:** tool tạo dự án mới, đặt Agent luôn hỏi trước khi sinh, tải ảnh làm nguyên liệu, gửi yêu cầu kèm mô hình, tỉ lệ, độ phân giải, thời lượng. Agent hỏi lại "… costing 15 credits?": tool đọc số credit, chỉ bấm **Approve** khi không vượt `flow.max_credits`, ngược lại bấm **Reject**.
 7. **Tải video** bản gốc 720p về. *Điểm duyệt 3.*
-8. **Nâng chất lượng:** nội suy lên 60fps (RIFE), phóng to 2K, mã hoá HEVC.
+8. **Nâng chất lượng:** nội suy lên 60fps (RIFE), phóng to 2K, đè logo của bạn lên dấu ✦ của Flow ở góc dưới phải (tuỳ chọn `logo.enabled`), mã hoá HEVC.
 9. **Xuất file** `{tên}_{ngày-giờ}_2k60.mp4` vào thư mục xuất (mặc định `~/Movies/AI-Video-Creator`).
 10. **Trả về Telegram**, ngay dưới tin gửi link: video 1080p xem nhanh, file 2K gốc, rồi một tin chỉ có tên sản phẩm để copy.
 11. *(Tuỳ chọn, đang tắt)* **Lưu nháp TikTok Studio:** tải video lên, mô tả là tên sản phẩm, bật nhãn "AI-generated content", bấm **Save draft**. Không bao giờ bấm Post.
@@ -70,7 +70,7 @@ Cài một lần:
 3. Nhắn `/start` cho bot của bạn, bot trả lời ID Telegram của bạn. Điền vào `.env`: `TELEGRAM_ALLOWED_USER_IDS=<ID>` (nhiều ID cách nhau bằng dấu phẩy), rồi khởi động lại tool.
 4. Thanh trên cùng hiện **"Telegram đang nghe"** là xong. Từ giờ trong app TikTok, bấm Chia sẻ, chọn Telegram, gửi cho bot của bạn.
 
-Bot chỉ nhận link từ những ID đã khai báo. Sau khi nhận link, tool đọc trang rồi chờ bạn **chọn ảnh trên giao diện**; chọn xong, tool tự chạy đến khi xuất video.
+Bot chỉ nhận link từ những ID đã khai báo. Sau khi nhận link, tool đọc trang rồi gửi **một ảnh ghép đánh số các ảnh sản phẩm** ngay dưới tin của bạn, kèm hàng nút số. Bấm số để chọn hoặc bỏ chọn (tối đa `flow.max_ingredients` ảnh, ảnh bấm đầu là ảnh chính, nút hiện `✅3·chính`, `✅6·2`), rồi bấm **▶ Bắt đầu**: tool tự chạy đến khi xuất video. Chọn trên giao diện tool cũng được; bên nào chọn trước thì tính bên đó.
 
 Khi video xong, bot **trả lời ngay dưới tin bạn gửi link**, theo thứ tự:
 - video 1080p xem ngay, kèm tên sản phẩm, link và tên file đã xuất trên Mac;
@@ -105,6 +105,7 @@ cd backend && ../.venv/bin/python -m app.sources.check_product_page "<link TikTo
 | `config.yaml` | Thư mục xuất, mô hình Flow, tỉ lệ khung hình, độ phân giải và thời lượng, số video mỗi lượt, số ảnh tối đa, mức credit tối đa, chất lượng tải, fps/độ phân giải xuất, mặc định các ô tự động, Telegram, lưu nháp TikTok |
 | `.env` | Token bot và ID Telegram được phép (bí mật, không đưa lên git; mẫu ở `.env.example`) |
 | `ad-rules.md` | Quy tắc viết prompt quảng cáo (gửi nguyên văn cho Claude) |
+| `assets/logo.png` | Logo của bạn đè lên dấu ✦ của Flow (PNG nền trong suốt, tự đặt vào; thư mục `assets/` không lên git). Vị trí và cỡ nằm trong mục `logo` của `config.yaml`, đo sẵn cho video 9:16; không có logo thì đặt `logo.enabled: false` |
 | `flow-selectors.yaml` | Cách tìm nút bấm trên Flow. Google đổi giao diện thì sửa ở đây |
 | `tiktok-selectors.yaml` | Cách tìm nút bấm trên TikTok Studio. TikTok đổi giao diện thì sửa ở đây |
 
@@ -129,7 +130,7 @@ Trong lúc chờ sửa, khi bước Flow lỗi bạn vẫn có thể tự sinh v
 
 Từ lúc chọn ảnh đến khi nhận video trên Telegram khoảng 8 phút (một job đo ngày 2026-10-15, chưa tính thời gian duyệt): tách nền ~20s, upscale ~20s, prompt ~25s, Flow ~4,5 phút (có lúc phải xếp hàng), tải video ~1 phút, nâng 60fps ~1,5 phút cho clip 10 giây, gửi Telegram ~20s.
 
-Tool tải bản gốc 720p (`flow.download: original`) rồi tự nâng lên 2K 60fps; Flow cũng cho tải bản 1080p (`flow.download: 1080p`). Video Flow có watermark ✦ nhỏ ở góc dưới bên phải.
+Tool tải bản gốc 720p (`flow.download: original`) rồi tự nâng lên 2K 60fps; Flow cũng cho tải bản 1080p (`flow.download: 1080p`). Video Flow có watermark ✦ nhỏ ở góc dưới bên phải (48×48px trên bản 720p); khi bật `logo.enabled`, logo của bạn được đè kín lên đó.
 
 ## Lưu ý
 

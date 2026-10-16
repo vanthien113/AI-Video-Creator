@@ -43,3 +43,37 @@ def test_steps_reopen_a_window_before_attaching(monkeypatch):
     assert fake.opened == [chrome_launcher.FLOW_HOME]
     cdp_connection.ensure_window(9222)  # a window exists now: nothing more to open
     assert len(fake.opened) == 1
+
+
+def test_new_tab_opens_in_the_background_without_focusing_chrome():
+    # context.new_page() and page.bring_to_front() made Chrome the frontmost app on every run (measured 2026-10-16).
+    sent, page = [], object()
+
+    class Session:
+        def send(self, method, params):
+            sent.append((method, params))
+            return {"targetId": "t1"}
+
+        def detach(self):
+            sent.append(("detach", None))
+
+    class Context:
+        class browser:
+            @staticmethod
+            def new_browser_cdp_session():
+                return Session()
+
+        def expect_page(self):
+            class Waiter:
+                value = page
+
+                def __enter__(self):
+                    return self
+
+                def __exit__(self, *exc):
+                    return False
+
+            return Waiter()
+
+    assert cdp_connection.new_tab(Context()) is page
+    assert sent == [("Target.createTarget", {"url": "about:blank", "background": True}), ("detach", None)]

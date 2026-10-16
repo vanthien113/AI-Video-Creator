@@ -27,6 +27,19 @@ def ensure_window(port: int) -> bool:
     return True
 
 
+def new_tab(context):
+    """A new tab that leaves Chrome in the background. context.new_page() and page.bring_to_front() made
+    Chrome the frontmost app on every run (measured 2026-10-16); a background target still renders and
+    takes clicks normally while the tool drives it."""
+    cdp = context.browser.new_browser_cdp_session()
+    try:
+        with context.expect_page() as created:
+            cdp.send("Target.createTarget", {"url": "about:blank", "background": True})
+        return created.value
+    finally:
+        cdp.detach()
+
+
 @contextmanager
 def browser_context(port: int):
     """Yield the default BrowserContext of the running Chrome; never launches or closes it."""

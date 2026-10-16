@@ -15,10 +15,12 @@ logging.getLogger("httpx").setLevel(logging.WARNING)  # INFO logs would print th
 
 class TelegramListener:
     def __init__(self, api: TelegramApi, token: str, allowed_ids: list[int],
-                 on_link: Callable[[str, int, int], bool], offset_file: Path):
-        """`on_link(url, chat_id, message_id)` queues a job; False means the link was a duplicate."""
+                 on_link: Callable[[str, int, int], bool], offset_file: Path,
+                 on_callback: Callable[[dict], str | None] | None = None):
+        """`on_link(url, chat_id, message_id)` queues a job; False means the link was a duplicate.
+        `on_callback(callback_query)` handles a button tap and returns the toast text."""
         self.api, self.token, self.allowed = api, token, set(allowed_ids)
-        self.on_link, self.offset_file = on_link, offset_file
+        self.on_link, self.offset_file, self.on_callback = on_link, offset_file, on_callback
         self.state, self.message = "starting", ""
         self._stop = threading.Event()
 
@@ -58,6 +60,9 @@ class TelegramListener:
                 self.offset_file.write_text(str(update["update_id"] + 1))
 
     def _handle(self, update: dict) -> None:
+        if update.get("callback_query"):
+            self._handle_tap(update["callback_query"])
+            return
         message = update.get("message")
         if not message:
             return
@@ -68,6 +73,14 @@ class TelegramListener:
                 self.api.send_message(chat_id, reply)
             except Exception:
                 pass  # the link is already queued; a lost "Đã nhận" is harmless
+
+    def _handle_tap(self, callback: dict) -> None:
+        user_id = (callback.get("from") or {}).get("id")
+        text = self.on_callback(callback) if self.on_callback and user_id in self.allowed else None
+        try:
+            self.api.answer_callback(callback["id"], text or "")  # always answer, or the button keeps spinning
+        except Exception:
+            pass
 
     def _loop(self) -> None:
         backoff = 1

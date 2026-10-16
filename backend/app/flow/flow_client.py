@@ -6,7 +6,7 @@ from contextlib import contextmanager
 from pathlib import Path
 
 from ..config import FlowConfig
-from .cdp_connection import BrowserNotRunning, browser_context
+from .cdp_connection import BrowserNotRunning, browser_context, new_tab
 from .flow_selectors import FlowSelectors, build_locator
 
 
@@ -154,8 +154,8 @@ def flow_session(cfg: FlowConfig, selectors: FlowSelectors | None = None):
     try:
         with browser_context(cfg.cdp_port) as context:
             host = selectors.home_url.split("/")[2]
-            page = next((p for p in context.pages if host in p.url), None) or context.new_page()
-            page.bring_to_front()
+            # No bring_to_front(): it pulled Chrome in front of whatever the user was doing.
+            page = next((p for p in context.pages if host in p.url), None) or new_tab(context)
             yield FlowClient(page, selectors)
     except BrowserNotRunning as exc:
         raise FlowError(str(exc), "not_logged_in") from exc

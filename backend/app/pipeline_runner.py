@@ -15,6 +15,8 @@ class PipelineRunner:
     def __init__(self, store: JobStore, bus: EventBus, config: AppConfig, steps: dict[str, StepFn]):
         self.store, self.bus, self.config, self.steps = store, bus, config, steps
         self.active_job_id: str | None = None  # only changed under the store lock
+        self.on_failure: Callable[[JobState], None] | None = None  # e.g. tell the user on Telegram
+        self.on_change: Callable[[JobState], None] | None = None   # every published job change (status message)
         self._wake = threading.Event()
         self._stop = threading.Event()
         self._thread: threading.Thread | None = None
@@ -131,7 +133,9 @@ class PipelineRunner:
             j.status, j.current_step, j.gate = JobStatus.failed, step, None
             j.error = JobError(step=step, reason=reason, screenshot=screenshot)
 
-        self.publish_update(job_id, mutate)
+        job = self.publish_update(job_id, mutate)
+        if self.on_failure and job.status == JobStatus.failed:
+            self.on_failure(job)
 
     def is_active(self, job_id: str) -> bool:
         """Read under the store lock (call from inside a store.update mutate)."""
@@ -157,6 +161,11 @@ class PipelineRunner:
     def publish_update(self, job_id: str, mutate: Callable[[JobState], None]) -> JobState:
         job = self.store.update(job_id, mutate)
         self.bus.publish({"type": "job", "job": job.model_dump(mode="json")})
+        if self.on_change:
+            try:
+                self.on_change(job)
+            except Exception:
+                pass  # a status message must never break the pipeline
         return job
 
     def _report(self, job_id: str, progress: float, message: str) -> None:

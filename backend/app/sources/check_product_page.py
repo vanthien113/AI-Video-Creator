@@ -6,7 +6,7 @@ Usage (from backend/):  ../.venv/bin/python -m app.sources.check_product_page <l
 import sys
 
 from ..config import load_config
-from ..flow.cdp_connection import BrowserNotRunning, browser_context
+from ..flow.cdp_connection import BrowserNotRunning, browser_context, new_tab
 from .product_page_reader import SourceError, read_product_page
 
 
@@ -16,7 +16,7 @@ def main() -> int:
         return 2
     try:
         with browser_context(load_config().flow.cdp_port) as context:
-            page = context.new_page()
+            page = new_tab(context)
             try:
                 product = read_product_page(page, sys.argv[1])
             finally:

@@ -6,10 +6,10 @@ error never creates a second draft.
 
 from pathlib import Path
 
-from ..config import TelegramConfig
-from ..flow.cdp_connection import BrowserNotRunning, browser_context, capture_page_error
+from ..flow.cdp_connection import BrowserNotRunning, browser_context, capture_page_error, new_tab
 from ..job_models import JobState, now_iso
 from ..telegram.telegram_api import TelegramApi, TelegramApiError
+from ..telegram.telegram_notify import notify_target
 from ..tiktok.studio_upload import StudioError, save_draft
 from .step_types import JobContext, StepFailure
 
@@ -22,17 +22,10 @@ def draft_description(job: JobState) -> str:
     return (job.source.title if job.source else "") or job.name
 
 
-def notify_target(job: JobState, telegram: TelegramConfig) -> tuple[int, int | None] | None:
-    """Reply under the link message for bot jobs; otherwise message the first allowed user."""
-    if job.telegram:
-        return job.telegram.chat_id, job.telegram.message_id
-    return (telegram.user_ids[0], None) if telegram.user_ids else None
-
-
 def save_draft_in_browser(ctx: JobContext, video: Path, description: str) -> None:  # replaced in tests
     try:
         with browser_context(ctx.config.flow.cdp_port) as context:
-            page = context.new_page()  # own tab: never disturb the Flow tab
+            page = new_tab(context)  # own tab: never disturb the Flow tab
             try:
                 save_draft(page, ctx.config.tiktok, video, description, ctx.report, ctx.log)
             except StudioError as exc:

@@ -22,13 +22,18 @@ class TelegramApi:
 
     def get_updates(self, offset: int, timeout: int = POLL_TIMEOUT_SEC) -> list[dict]:
         response = self.http.get(f"{self.base}/getUpdates", params={
-            "offset": offset, "timeout": timeout, "allowed_updates": '["message"]'})
+            "offset": offset, "timeout": timeout, "allowed_updates": '["message", "callback_query"]'})
         response.raise_for_status()
         return response.json().get("result", [])
 
-    def send_message(self, chat_id: int, text: str, reply_to: int | None = None) -> None:
-        self._call("sendMessage", {"chat_id": chat_id, "text": text, "disable_web_page_preview": True,
-                                   **self._reply(reply_to)}, as_json=True)
+    def send_message(self, chat_id: int, text: str, reply_to: int | None = None) -> int | None:
+        body = self._call("sendMessage", {"chat_id": chat_id, "text": text, "disable_web_page_preview": True,
+                                          **self._reply(reply_to)}, as_json=True)
+        return (body.get("result") or {}).get("message_id")
+
+    def edit_text(self, chat_id: int, message_id: int, text: str) -> None:
+        self._call("editMessageText", {"chat_id": chat_id, "message_id": message_id, "text": text,
+                                       "disable_web_page_preview": True}, as_json=True)
 
     def send_video(self, chat_id: int, path: Path, caption: str, reply_to: int | None = None,
                    width: int = 0, height: int = 0, duration: int = 0) -> None:
@@ -40,6 +45,28 @@ class TelegramApi:
         data = {"chat_id": chat_id, "caption": caption[:1024], **self._reply(reply_to)}
         self._upload("sendDocument", "document", path, "video/mp4", data)
 
+    def send_photo(self, chat_id: int, path: Path, caption: str, reply_to: int | None = None,
+                   reply_markup: dict | None = None) -> int:
+        """Returns the message id, so the buttons under the photo can be edited later."""
+        data = {"chat_id": chat_id, "caption": caption[:1024], **self._reply(reply_to)}
+        if reply_markup:
+            data["reply_markup"] = json.dumps(reply_markup)
+        mime = "image/png" if path.suffix.lower() == ".png" else "image/jpeg"
+        return self._upload("sendPhoto", "photo", path, mime, data)["result"]["message_id"]
+
+    def edit_reply_markup(self, chat_id: int, message_id: int, reply_markup: dict) -> None:
+        self._call("editMessageReplyMarkup", {"chat_id": chat_id, "message_id": message_id,
+                                              "reply_markup": reply_markup}, as_json=True)
+
+    def edit_caption(self, chat_id: int, message_id: int, caption: str) -> None:
+        """New caption; the buttons are dropped because no reply_markup is sent."""
+        self._call("editMessageCaption", {"chat_id": chat_id, "message_id": message_id, "caption": caption[:1024]},
+                   as_json=True)
+
+    def answer_callback(self, callback_id: str, text: str = "") -> None:
+        """Stops the spinner on the tapped button; `text` shows as a short toast."""
+        self._call("answerCallbackQuery", {"callback_query_id": callback_id, "text": text[:190]}, as_json=True)
+
     # ---- helpers ----------------------------------------------------------
     @staticmethod
     def _reply(reply_to: int | None) -> dict:
@@ -48,9 +75,9 @@ class TelegramApi:
         # Still send if the original message was deleted.
         return {"reply_parameters": json.dumps({"message_id": reply_to, "allow_sending_without_reply": True})}
 
-    def _upload(self, method: str, field: str, path: Path, mime: str, data: dict) -> None:
+    def _upload(self, method: str, field: str, path: Path, mime: str, data: dict) -> dict:
         with open(path, "rb") as fh:
-            self._call(method, {k: str(v) for k, v in data.items()}, files={field: (path.name, fh, mime)},
+            return self._call(method, {k: str(v) for k, v in data.items()}, files={field: (path.name, fh, mime)},
                        timeout=UPLOAD_TIMEOUT_SEC)
 
     def _call(self, method: str, data: dict, files: dict | None = None, as_json: bool = False,

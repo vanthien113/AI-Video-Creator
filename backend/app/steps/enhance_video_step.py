@@ -4,7 +4,7 @@ import shutil
 
 from ..media.command_runner import RIFE_BIN, RIFE_MODELS_DIR, require_tool, run_tool
 from ..media.ffmpeg_commands import (
-    encode_command, extract_frames_command, rife_command, target_frame_count, target_size,
+    encode_command, extract_frames_command, logo_box, rife_command, target_frame_count, target_size,
 )
 from ..media.video_probe import probe_video
 from .step_types import JobContext, StepFailure
@@ -33,6 +33,12 @@ def run_enhance(ctx: JobContext) -> None:
     frame_count = target_frame_count(info.duration, cfg.fps)
     size = target_size(info.width, info.height, cfg.long_edge)
     ctx.log(f"enhance: {info} → {frame_count} frames @ {cfg.fps}fps, {size}")
+    logo = None
+    if ctx.config.logo.enabled:
+        if not ctx.config.logo.file.exists():
+            raise StepFailure(f"Không thấy file logo {ctx.config.logo.file} (logo.file trong config.yaml).")
+        logo = (ctx.config.logo.file, *logo_box(ctx.config.logo, size))
+        ctx.log(f"enhance: logo {ctx.config.logo.file.name} at {logo[1:]} (x, y, side)")
 
     tmp = ctx.path("tmp")
     shutil.rmtree(tmp, ignore_errors=True)
@@ -61,7 +67,7 @@ def run_enhance(ctx: JobContext) -> None:
                 ctx.report(EXTRACT + INTERPOLATE + ENCODE * done / produced,
                            f"Mã hoá {size[0]}×{size[1]} {done}/{produced}")
 
-        run_tool(encode_command(frames_out, src, info.has_audio, cfg.fps, size, cfg.bitrate, out),
+        run_tool(encode_command(frames_out, src, info.has_audio, cfg.fps, size, cfg.bitrate, out, logo=logo),
                  timeout=3600, on_line=encode_progress, should_stop=ctx.is_cancelled, label=f"ffmpeg (mã hoá {cfg.label})")
     finally:
         shutil.rmtree(tmp, ignore_errors=True)

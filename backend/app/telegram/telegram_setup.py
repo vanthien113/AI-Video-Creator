@@ -5,6 +5,7 @@ from ..job_models import TelegramOrigin
 from ..link_job_actions import LinkJobActions
 from .telegram_api import TelegramApi
 from .telegram_listener import TelegramListener
+from .telegram_pick import PickHandler
 
 OFFSET_FILE = ".telegram-offset"
 
@@ -13,11 +14,13 @@ def start_telegram(config: AppConfig, actions: LinkJobActions) -> TelegramListen
     tg = config.telegram
     if not tg.enabled or not tg.bot_token:
         return None
+    api = TelegramApi(tg.bot_token)
     listener = TelegramListener(
-        TelegramApi(tg.bot_token), tg.bot_token, tg.user_ids,
+        api, tg.bot_token, tg.user_ids,
         on_link=lambda url, chat_id, message_id: actions.create_from_link(
             url, TelegramOrigin(chat_id=chat_id, message_id=message_id)) is not None,
         offset_file=config.paths.jobs_dir / OFFSET_FILE,
+        on_callback=PickHandler(actions, api, config).handle,
     )
     listener.start()
     return listener
