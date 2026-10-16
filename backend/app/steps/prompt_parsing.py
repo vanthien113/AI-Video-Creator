@@ -70,4 +70,6 @@ def parse_claude_output(stdout: str) -> dict[str, str]:
         raise PromptParseError("thiếu trường 'prompt'")
     if not isinstance(summary, str):
         summary = ""
-    return {"prompt": prompt.strip(), "summary": summary.strip()}
+    product_type = data.get("product_type")
+    product_type = " ".join(product_type.split()).lower() if isinstance(product_type, str) else ""
+    return {"prompt": prompt.strip(), "summary": summary.strip(), "product_type": product_type}

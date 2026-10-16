@@ -1,4 +1,4 @@
-"""Ask Google's AI Mode for 3 TikTok hashtags trending in Vietnam for a product.
+"""Ask Google's AI Mode for TikTok hashtag candidates for a product (checked on TikTok afterwards).
 
 Observed 2026-10-16: the plain results page shows an AI answer only sometimes, while AI Mode
 (udm=50) answered in ~8 s with a numbered list, each item starting with the hashtag, e.g.
@@ -13,18 +13,20 @@ from urllib.parse import quote
 AI_MODE_URL = "https://www.google.com/search?hl=vi&udm=50&q="
 TAG = re.compile(r"#[0-9A-Za-zÀ-ỹĐđ_]{2,40}")
 BRACKETS = re.compile(r"\([^)]*\)|\[[^\]]*\]|【[^】]*】")
-MAX_NAME = 90
+BREAKS = re.compile(r"\s+[-–|]\s+|[,;|]|\s-(?=\s|\w)")
+MAX_WORDS = 8
 
 
-def search_query(title: str) -> str:
-    """Shop titles carry promo brackets ("(DEAL ĐỘC QUYỀN …)"): drop them and keep the product name short."""
-    name = " ".join(BRACKETS.sub(" ", title).split())
-    if len(name) > MAX_NAME:
-        name = name[:MAX_NAME].rsplit(" ", 1)[0]
-    return f"3 hashtag tiktok đang xu hướng ở Việt Nam cho sản phẩm {name}"
+def search_query(title: str, product_type: str = "") -> str:
+    """Ask by product type, not the whole shop title: with the full title Google glued its words into
+    tags nobody uses (#depsandallonumuikin). `product_type` is what Claude named it at the prompt step
+    ("dép sandal nữ"); without it, promo brackets go and the title stops at the first separator."""
+    name = product_type or BREAKS.split(" ".join(BRACKETS.sub(" ", title).split()))[0]
+    name = " ".join(name.split()[:MAX_WORDS])
+    return f"10 hashtag tiktok phổ biến, đang được dùng nhiều ở Việt Nam cho {name}"
 
 
-def parse_hashtags(items: list[str], text: str, count: int = 3) -> list[str]:
+def parse_hashtags(items: list[str], text: str, count: int = 10) -> list[str]:
     """Lead hashtag of each list item ("#a (hoặc #b)" gives #a); top up from the free text if needed."""
     picked = [m.group(0) for line in items if (m := TAG.match(line.strip()))]
     picked += TAG.findall(text)

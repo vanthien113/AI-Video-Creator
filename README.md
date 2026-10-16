@@ -25,7 +25,7 @@ Telegram / giao diện ─▶ Đọc TikTok ─▶ Chọn ảnh ─▶ Tách n�
 7. **Tải video** bản gốc 720p về. *Điểm duyệt 3.*
 8. **Nâng chất lượng:** nội suy lên 60fps (RIFE), phóng to 2K, đè logo của bạn lên dấu ✦ của Flow ở góc dưới phải (tuỳ chọn `logo.enabled`), mã hoá HEVC.
 9. **Xuất file** `{tên}_{ngày-giờ}_2k60.mp4` vào thư mục xuất (mặc định `~/Movies/AI-Video-Creator`).
-10. **Tìm hashtag:** hỏi Chế độ AI của Google 3 hashtag TikTok đang xu hướng ở Việt Nam cho sản phẩm (khoảng 8 giây; Google lỗi thì Claude tự đặt, không làm hỏng job).
+10. **Tìm hashtag:** hỏi Chế độ AI của Google 10 hashtag ứng viên theo loại sản phẩm, kiểm tra từng cái trên TikTok (có tồn tại, ít nhất 1.000 video) và giữ 3 cái đầu tiên đạt (khoảng 15–25 giây; Google lỗi thì Claude đưa ứng viên; không làm hỏng job).
 11. **Trả về Telegram**, ngay dưới tin gửi link: video 1080p xem nhanh, file 2K gốc, rồi một tin chỉ có tên sản phẩm và 3 hashtag để copy.
 12. *(Tuỳ chọn, đang tắt)* **Lưu nháp TikTok Studio:** tải video lên, mô tả là tên sản phẩm, bật nhãn "AI-generated content", bấm **Save draft**. Không bao giờ bấm Post.
 
@@ -76,7 +76,7 @@ Bot chỉ nhận link từ những ID đã khai báo. Sau khi nhận link, tool 
 Khi video xong, bot **trả lời ngay dưới tin bạn gửi link**, theo thứ tự:
 - video 1080p xem ngay, kèm tên sản phẩm, link và tên file đã xuất trên Mac;
 - file 2K 60fps gốc dạng tệp đính kèm nếu không quá 50MB (2K 10 giây khoảng 30MB). Vượt quá thì bot gửi một dòng cho biết file nằm ở đâu trên Mac, vì Telegram giới hạn bot gửi file tối đa 50MB;
-- một tin chỉ có tên sản phẩm và 3 hashtag ở dòng dưới, để bấm giữ là copy được làm caption. Hashtag lấy từ Chế độ AI của Google (tổng hợp từ web gần đây, không phải số liệu chính thức của TikTok); Google lỗi thì Claude tự đặt.
+- một tin chỉ có tên sản phẩm và 3 hashtag ở dòng dưới, để bấm giữ là copy được làm caption. Mỗi hashtag đã được kiểm tra là có thật trên TikTok; nếu không kiểm tra được (ví dụ mạng chặn TikTok) thì dòng hashtag kết thúc bằng "(chưa xác minh)".
 
 Nếu gửi lỗi (mất mạng...), video vẫn đã xuất trên Mac; bấm **Thử lại** ở bước "Gửi Telegram" để gửi lại phần còn thiếu.
 

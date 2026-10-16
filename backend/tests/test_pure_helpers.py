@@ -78,7 +78,7 @@ def test_parse_claude_output_rejects(stdout):
 def test_parse_stream_json_takes_final_result_line():
     lines = "\n".join([json.dumps({"type": "system"}), json.dumps({"type": "assistant"}),
                         envelope('{"prompt": "P", "summary": "S"}')])
-    assert parse_claude_output(lines) == {"prompt": "P", "summary": "S"}
+    assert parse_claude_output(lines) == {"prompt": "P", "summary": "S", "product_type": ""}
 
 
 def test_claude_gets_no_tools_and_page_text_is_fenced():

@@ -101,6 +101,7 @@ class JobState(BaseModel):
     telegram: TelegramOrigin | None = None
     hashtags: list[str] = Field(default_factory=list)  # sent after the title on Telegram
     hashtags_source: str = ""  # "google" | "claude" | "" (none found)
+    hashtags_verified: bool = False  # each one checked on TikTok (exists, enough videos)
     status_message: TelegramMessageRef | None = None  # the one Telegram message edited as the job moves on
     tiktok: TikTokDraftState = Field(default_factory=TikTokDraftState)
     feedback: str = ""

@@ -75,7 +75,8 @@ def run_send_telegram(ctx: JobContext) -> None:
 
         title = ctx.job.source.title if ctx.job.source else ""
         if title and not origin.title_sent:
-            text = "\n".join([title, " ".join(ctx.job.hashtags)]) if ctx.job.hashtags else title
+            tags = " ".join(ctx.job.hashtags) + ("" if ctx.job.hashtags_verified else " (chưa xác minh)")
+            text = f"{title}\n{tags}" if ctx.job.hashtags else title
             api.send_message(origin.chat_id, text, reply_to=origin.message_id)  # title + hashtags only: easy to copy
             ctx.update_job(lambda j: setattr(j.telegram, "title_sent", True))
     except TelegramApiError as exc:
