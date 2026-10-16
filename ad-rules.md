@@ -9,7 +9,9 @@ Các quy tắc bám theo hướng dẫn nội dung của TikTok Shop: có ngư�
 
 ## Câu hook (bắt buộc)
 - 2 giây đầu là câu hook do người trong video nói thẳng vào camera, kèm hình ảnh mở đầu có chuyển động mạnh (cận cảnh, máy lia nhanh vào sản phẩm).
-- Câu hook tiếng Việt, tối đa 12 từ, đánh vào nỗi đau hoặc lợi ích rõ nhất của sản phẩm, dạng câu hỏi hoặc lời gọi thẳng. Ví dụ: "Chị em nào đi làm cả ngày mà hay đau chân thì xem ngay!"
+- Tự nghĩ câu hook riêng cho sản phẩm này từ ảnh và thông tin sản phẩm, không theo khuôn hay câu mẫu nào: mỗi sản phẩm một cách mở đầu, một góc nhìn, một giọng điệu khác nhau.
+- Câu hook tiếng Việt, ngắn (tối đa 12 từ), tự nhiên như người thật nói, bám vào điểm đáng chú ý nhất của chính sản phẩm này (kiểu dáng, màu, chất liệu, chi tiết, tính năng có trong thông tin sản phẩm hoặc ghi chú của shop). Không nêu công dụng mà thông tin sản phẩm không ghi.
+- Tool gửi kèm các hook của những video gần đây: hook mới không được giống chúng về câu chữ, cách mở đầu hay góc nhìn.
 - Viết đúng câu hook trong prompt theo dạng: `She says in Vietnamese: "..."`.
 
 ## Người và sản phẩm
