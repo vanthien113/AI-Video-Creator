@@ -8,8 +8,8 @@ import pytest
 
 from app.config import TikTokConfig
 from app.tiktok import studio_post
-from app.tiktok.studio_post import (PostPlan, button_label, clean_product_name, invalid_chars, pick_suggestion,
-                                    post_video, wait_checks, wait_submitted)
+from app.tiktok.studio_post import (PostPlan, add_hashtags, button_label, clean_product_name, invalid_chars,
+                                    pick_suggestion, post_video, title_first, wait_checks, wait_submitted)
 from app.tiktok.studio_upload import StudioError, load_selectors
 
 INVALID = re.compile(r"invalid characters?:\s*(.+)", re.I)
@@ -391,3 +391,63 @@ def test_failed_check_never_clicks(monkeypatch):
     with pytest.raises(StudioError):
         _run_post(monkeypatch, events, check_error=StudioError("không đúng"))
     assert "before_click" not in events and "click" not in events
+
+
+# ---- hashtags go after the title (real bug on 2026-10-17: the first tag landed before the title) ----------
+
+class EventKeys:
+    def __init__(self, events):
+        self.events = events
+
+    def press(self, key):
+        self.events.append(f"press {key}")
+
+    def insert_text(self, text):
+        self.events.append(f"insert {text!r}")
+
+    def type(self, text, delay=0):
+        self.events.append(f"type {text}")
+
+
+class EventEditor:
+    def __init__(self, events):
+        self.events = events
+
+    def click(self):
+        self.events.append("click")
+
+    def count(self):
+        return 0
+
+    @property
+    def first(self):
+        return self
+
+
+class EventSel:
+    def __init__(self, events):
+        self.editor = EventEditor(events)
+
+    def locate(self, scope, key, value=None):
+        return self.editor
+
+
+class EventPage:
+    def __init__(self, events):
+        self.keyboard = EventKeys(events)
+
+
+def test_after_the_new_line_the_caret_goes_back_to_the_end_before_the_first_tag(monkeypatch):
+    # DraftJS moves the caret to the start right after the inserted new line.
+    events = []
+    monkeypatch.setattr(studio_post, "pick_suggestion", lambda page, sel, tag: True)
+    add_hashtags(EventPage(events), EventSel(events), ["#a", "#b"], lambda m: None)
+    assert events == ["click", "press Meta+ArrowDown", "insert '\\n'", "click", "press Meta+ArrowDown", "type #a",
+                      "click", "press Meta+ArrowDown", "type #b"]
+
+
+def test_title_first_checks_the_description_order():
+    title = "Giày bốt oxford MIMI kiểu dáng trẻ trung Nữ Shoes Women Loafer"
+    assert title_first(f"{title}\n#giayluoinu #giayluoi #goclamdep ", title)
+    assert not title_first(f"#giayluoinuGiày bốt oxford MIMI kiểu dáng trẻ trung Nữ Shoes Women Loafer\n#giayluoi ", title)
+    assert title_first("  Giày   bốt oxford MIMI kiểu dáng trẻ trung Nữ Shoes Women Loafer", title)

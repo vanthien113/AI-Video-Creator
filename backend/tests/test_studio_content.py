@@ -68,3 +68,11 @@ def test_finds_the_post_just_made_even_when_tiktok_changes_punctuation():
 def test_empty_title_matches_nothing():
     item = {"desc": "bài bất kỳ", "create_time": str(int(datetime(2026, 10, 18, 10).timestamp()))}
     assert find_new_post([item], "  +!  ", datetime(2026, 10, 18, 9), None) is None
+
+
+def test_a_post_whose_first_hashtag_landed_before_the_title_is_still_found():
+    # The real 2026-10-17 post: the tool must recognise it, or "Thử lại" would post it a second time.
+    title = "Giày bốt oxford MIMI kiểu dáng trẻ trung Nữ Shoes Women Loafer"
+    mimi = {"desc": "#giayluoinuGiày bốt oxford MIMI kiểu dáng trẻ trung Nữ Shoes Women Loafer #giayluoi #goclamdep",
+            "create_time": epoch(17, 12, 34), "post_time": epoch(17, 12, 34), "status": 102}
+    assert find_new_post([POSTED, mimi], title, datetime(2026, 10, 17, 12, 34), None) is mimi

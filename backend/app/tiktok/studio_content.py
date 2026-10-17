@@ -64,9 +64,9 @@ def latest_time(items: list[dict]) -> datetime | None:
 
 
 def find_new_post(items: list[dict], title: str, since: datetime, scheduled_for: datetime | None) -> dict | None:
-    """The post the tool just made: its description starts with the product title (punctuation aside: TikTok
-    turned "sục+Tặng" into "sục Tặng"), it was created after `since` and, when scheduled, goes out at
-    `scheduled_for`."""
+    """The post the tool just made: its description holds the product title (punctuation aside: TikTok turned
+    "sục+Tặng" into "sục Tặng"; and a 2026-10-17 post had a hashtag glued before the title), it was created
+    after `since` and, when scheduled, goes out at `scheduled_for`."""
     head = _words(title)[:40]
     if not head:
         return None
@@ -75,7 +75,7 @@ def find_new_post(items: list[dict], title: str, since: datetime, scheduled_for:
             created = datetime.fromtimestamp(int(item.get("create_time") or 0))
         except (TypeError, ValueError):
             continue
-        if created < since - CLOCK_SKEW or not _words(item.get("desc", "")).startswith(head):
+        if created < since - CLOCK_SKEW or head not in _words(item.get("desc", "")):
             continue
         if scheduled_for and item_time(item) != scheduled_for:
             continue

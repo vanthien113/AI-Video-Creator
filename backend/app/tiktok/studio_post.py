@@ -169,10 +169,10 @@ def add_hashtags(page, sel: FlowSelectors, tags: list[str], log: Callable[[str],
     editor = sel.locate(page, "description_editor").first
     picked = 0
     for i, tag in enumerate(tags):
-        editor.click()
-        page.keyboard.press("Meta+ArrowDown")  # caret to the end of the text
+        _caret_to_end(page, editor)
         if i == 0:
             page.keyboard.insert_text("\n")
+            _caret_to_end(page, editor)  # DraftJS puts the caret back at the start after the new line (2026-10-17)
         page.keyboard.type(tag, delay=60)
         if pick_suggestion(page, sel, tag):
             picked += 1  # TikTok adds the space after a picked tag
@@ -182,6 +182,16 @@ def add_hashtags(page, sel: FlowSelectors, tags: list[str], log: Callable[[str],
             page.keyboard.type(" ")
     log(f"tiktok_post: {sel.locate(page, 'hashtag_done').count()} hashtag thật trong mô tả")
     return picked
+
+
+def _caret_to_end(page, editor) -> None:
+    editor.click()
+    page.keyboard.press("Meta+ArrowDown")
+
+
+def title_first(description: str, title: str) -> bool:
+    """The description starts with the product title (hashtags come after it)."""
+    return " ".join(description.split()).startswith(" ".join(title[:40].split()))
 
 
 def add_product_link(page, sel: FlowSelectors, texts: dict[str, re.Pattern], product_id: str,
@@ -310,6 +320,8 @@ def check_ready(page, sel: FlowSelectors, texts: dict[str, re.Pattern], cfg: Tik
     """Last look before the click; returns the button to press."""
     if not has_description(page, sel, plan.title[:MAX_DESCRIPTION]):
         raise StudioError("Mô tả trên TikTok Studio bị mất trước khi đăng; tool dừng, không bấm.")
+    if not title_first(sel.locate(page, "description_editor").first.inner_text(), plan.title):
+        raise StudioError("Mô tả không bắt đầu bằng tên sản phẩm (hashtag bị chèn sai chỗ); tool dừng, không bấm.")
     if product_name not in sel.locate(page, "anchor_container").first.inner_text():
         raise StudioError("Link sản phẩm không còn trên form; tool dừng, không bấm.")
     if cfg.ai_generated_label and not ai_label_on(page, texts["ai_label_row"]):
