@@ -1,6 +1,7 @@
 # Cách tìm phần tử trên TikTok Studio, trang tải video (khảo sát 2026-10-15, giao diện tiếng Anh).
 # TikTok đổi giao diện thì sửa file này, không cần sửa code. Cú pháp giống flow-selectors.yaml.
-# Tool chỉ bấm "Save draft" (data-e2e=save_draft_button), không bao giờ bấm "Post".
+# Bước lưu nháp chỉ bấm "Save draft". Bước "Đăng TikTok" chỉ bấm Post/Schedule sau khi người dùng bấm nút
+# Đăng ngay / Lên lịch.
 
 file_input: {css: "input[type=file][accept='video/*']"}
 description_editor: {css: ".public-DraftEditor-content[contenteditable=true]"}
@@ -21,3 +22,45 @@ texts:
   upload_done: "\\buploaded\\b|đã tải lên"
   ai_label_row: "AI-generated content|nội dung do AI tạo"
   draft_saved: "saved to drafts|draft saved|đã lưu vào bản nháp|đã lưu bản nháp"
+  invalid_chars: "invalid characters?:\\s*(.+)"   # "Remove invalid characters: +" dưới ô Product name
+# ---- Đăng ngay / Lên lịch (khảo sát 2026-10-17, giao diện tiếng Anh, không bấm Post/Schedule) ----
+upload_status: {css: "[data-e2e=upload_status_container]"}   # "Uploaded（30.44MB）" khi tải xong
+post_button: {css: "[data-e2e=post_video_button]"}
+post_button_text: {now: "Post", schedule: "Schedule"}       # chữ trên nút theo lựa chọn When to post
+
+# Add link: nút Add → hộp "Add link" (Products) → Next → hộp "Add product links" → tìm ID → chọn dòng → Next
+# → ô "Product name" → Add
+add_link_button: {css: "[data-e2e=anchor_container] button"}
+anchor_container: {css: "[data-e2e=anchor_container]"}       # hiện tên sản phẩm sau khi gắn link
+link_dialog: {role: dialog, name: "Add link", exact: true}
+product_dialog: {role: dialog, name: "Add product links", exact: true}
+product_search: {css: "input[placeholder='Search products']"}
+product_rows: {css: "tbody tr"}
+product_id_cell: {css: "td:nth-child(2)"}                    # cột "Product ID"
+product_radio: {css: "input[type=radio]"}
+product_name_input: {css: "input[type=text]:not([placeholder='Search products'])"}
+dialog_next: {role: button, name: "Next", exact: true}
+dialog_add: {role: button, name: "Add", exact: true}
+dialog_cancel: {role: button, name: "Cancel", exact: true}
+
+# When to post: radio name=postSchedule, value post_now | schedule (đọc aria-checked)
+schedule_container: {css: "[data-e2e=schedule_container]"}
+when_option: {css: "[data-e2e=schedule_container] label:has(input[name=postSchedule][value='{value}'])"}
+when_input: {css: "[data-e2e=schedule_container] input[name=postSchedule][value='{value}']"}
+calendar: {css: ".calendar-wrapper"}
+calendar_month: {css: ".month-title"}                        # "October"
+calendar_year: {css: ".year-title"}                          # "2026"
+calendar_arrow: {css: ".arrow"}                              # đầu tiên = tháng trước, cuối = tháng sau
+calendar_day: {css: ".day.valid"}                            # chỉ ngày chọn được (hôm nay → +30 ngày)
+
+# Gợi ý hashtag khi gõ "#tag": dòng đầu được chọn sẵn; Enter biến chữ thành hashtag thật
+hashtag_topics: {css: "[role=option] .hash-tag-topic"}
+hashtag_selected: {css: "[role=option][aria-selected=true] .hash-tag-topic"}
+hashtag_done: {css: "[data-testid=mentionText]"}
+
+# Hộp TikTok có thể hỏi lại SAU KHI tool đã bấm Post/Schedule. Chưa khảo sát được (phải đăng thật):
+# tên nút là phỏng đoán; tool chỉ bấm chúng sau cú bấm Post/Schedule của chính nó.
+confirm_post_buttons:
+  - {role: button, name: "Post now", exact: true}
+  - {role: button, name: "Post anyway", exact: true}
+  - {role: button, name: "Schedule anyway", exact: true}
