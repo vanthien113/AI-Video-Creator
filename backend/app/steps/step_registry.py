@@ -10,6 +10,7 @@ from .prompt_step import run_prompt
 from .send_telegram_step import run_send_telegram
 from .step_types import StepFn
 from .tiktok_draft_step import run_tiktok_draft
+from .tiktok_post_step import run_tiktok_post
 from .upscale_step import run_upscale
 
 
@@ -26,4 +27,5 @@ def build_steps() -> dict[str, StepFn]:
         "hashtags": run_hashtags,
         "send_telegram": run_send_telegram,
         "tiktok_draft": run_tiktok_draft,
+        "tiktok_post": run_tiktok_post,
     }
