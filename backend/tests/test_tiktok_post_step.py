@@ -1,5 +1,6 @@
 """The tiktok_post step with a fake TikTok Studio and a fake Bot API."""
 
+import contextlib
 from datetime import datetime, timedelta
 
 import pytest
@@ -8,7 +9,7 @@ from app.config import TelegramConfig
 from app.job_models import JobState, SourceInfo, TelegramMessageRef, TelegramOrigin, TikTokPostState
 from app.steps import tiktok_post_step
 from app.steps.step_types import StepFailure
-from app.steps.tiktok_post_step import other_scheduled, run_tiktok_post
+from app.steps.tiktok_post_step import BrowserStudio, other_scheduled, run_tiktok_post
 from app.telegram.telegram_api import TelegramApiError
 from app.telegram.telegram_post import FAILED_TEXT, OFFER_TEXT
 from app.tiktok.post_plan import slot_label
@@ -20,7 +21,7 @@ TITLE = "[JOLY 01] Dép sục+Tặng 1 bộ charm"
 class FakeStudio:
     def __init__(self):
         self.items, self.found, self.fail = [], True, None
-        self.posted, self.clicks = [], 0
+        self.posted, self.clicks, self.boom, self.last_error = [], 0, None, None
 
     def latest(self, when: datetime):
         self.items = [{"desc": "bài cũ", "post_time": str(int(when.timestamp()))}]
@@ -33,6 +34,8 @@ class FakeStudio:
         if self.fail:
             raise StepFailure(self.fail)
         before_click()
+        if self.boom:
+            raise self.boom
         self.clicks += 1
 
     def find_post(self, title, since, schedule_at):
@@ -187,3 +190,97 @@ def test_missing_video_fails_before_any_browser_work(rig):
     with pytest.raises(StepFailure, match="video đã xuất"):
         run_tiktok_post(build("now"))
     assert studio.posted == []
+
+
+def test_find_post_keeps_reading_after_a_failed_read(rig, monkeypatch):
+    build, _, _, _ = rig
+    ctx = build("now")
+    monkeypatch.setattr(tiktok_post_step, "CONFIRM_WAIT_SEC", 0)
+    studio = BrowserStudio(ctx)
+    since = datetime.now() - timedelta(minutes=1)
+    reads = []
+
+    def flaky():
+        reads.append(1)
+        if len(reads) == 1:
+            raise StepFailure("đọc lỗi", screenshot="errors/a.png")
+        return [{"desc": TITLE, "create_time": str(int(datetime.now().timestamp()))}]
+
+    studio.content_items = flaky
+    assert studio.find_post(TITLE, since, None) is True
+    assert len(reads) == 2
+
+    def always_fails():
+        raise StepFailure("đọc lỗi", screenshot="errors/a.png")
+
+    studio.content_items = always_fails
+    assert studio.find_post(TITLE, since, None) is False
+    assert studio.last_error.screenshot == "errors/a.png"
+
+
+class FakePage:
+    def __init__(self, url):
+        self.url, self.closed = url, False
+
+    def close(self):
+        self.closed = True
+
+
+def test_tab_stays_open_while_tiktok_shows_the_form(rig, monkeypatch):
+    build, _, _, _ = rig
+    ctx = build("now")
+    page_holder = {}
+
+    @contextlib.contextmanager
+    def fake_context(port):
+        yield object()
+
+    def fake_new_tab(context):
+        page_holder["page"] = FakePage(url=page_holder["url"])
+        return page_holder["page"]
+
+    monkeypatch.setattr(tiktok_post_step, "browser_context", fake_context)
+    monkeypatch.setattr(tiktok_post_step, "new_tab", fake_new_tab)
+    monkeypatch.setattr(tiktok_post_step, "post_video", lambda *args, **kwargs: None)
+    studio = BrowserStudio(ctx)
+
+    page_holder["url"] = "https://www.tiktok.com/tiktokstudio/upload?from=creator"
+    studio.post(None, lambda: None)
+    assert page_holder["page"].closed is False
+
+    page_holder["url"] = "https://www.tiktok.com/tiktokstudio/content"
+    studio.post(None, lambda: None)
+    assert page_holder["page"].closed is True
+
+    page_holder["url"] = "https://www.tiktok.com/tiktokstudio/content"
+    studio.post(None, lambda: None, dry_run=True)
+    assert page_holder["page"].closed is False
+
+
+def test_unconfirmed_failure_carries_the_last_read_screenshot(rig):
+    build, studio, _, _ = rig
+    ctx = build("now")
+    studio.found = False
+    studio.last_error = StepFailure("đọc lỗi", screenshot="errors/y.png")
+    with pytest.raises(StepFailure, match="Tool đã bấm Post") as info:
+        run_tiktok_post(ctx)
+    assert info.value.screenshot == "errors/y.png"
+
+
+def test_failure_after_the_click_says_the_click_happened(rig):
+    build, studio, _, _ = rig
+    ctx = build("now")
+    studio.boom = StepFailure("boom", screenshot="errors/x.png")
+    with pytest.raises(StepFailure, match="Tool đã bấm Post") as info:
+        run_tiktok_post(ctx)
+    assert info.value.screenshot == "errors/x.png"
+    assert ctx.job.post.submitted_at and not ctx.job.post.done_at
+
+
+def test_cancelled_job_is_not_clicked(rig):
+    build, studio, _, _ = rig
+    ctx = build("now")
+    ctx.is_cancelled = lambda: True
+    with pytest.raises(StepFailure, match="huỷ"):
+        run_tiktok_post(ctx)
+    assert studio.clicks == 0 and ctx.job.post.submitted_at is None

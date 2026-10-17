@@ -32,36 +32,49 @@ class BrowserStudio:
 
     def __init__(self, ctx: JobContext):
         self.ctx = ctx
+        self.last_error: StepFailure | None = None  # last failed read of the Content page
 
     def content_items(self) -> list[dict]:
         return self._in_tab(lambda page: read_items(page, self.ctx.config.tiktok.content_url))
 
     def post(self, plan: PostPlan, before_click, dry_run: bool = False) -> None:
+        # The form still showing after the click means TikTok asked something the tool could not answer.
         self._in_tab(lambda page: post_video(page, self.ctx.config.tiktok, plan, self.ctx.report, self.ctx.log,
-                                             before_click, dry_run=dry_run), keep_open=dry_run)
+                                             before_click, dry_run=dry_run),
+                     keep_open=lambda page: dry_run or "/upload" in page.url)
 
     def find_post(self, title: str, since: datetime, schedule_at: datetime | None) -> bool:
+        self.last_error = None
         for attempt in range(CONFIRM_TRIES):
-            if find_new_post(self.content_items(), title, since, schedule_at):
-                return True
+            try:
+                if find_new_post(self.content_items(), title, since, schedule_at):
+                    return True
+            except StepFailure as exc:  # a failed read is retried like a post not yet shown
+                self.last_error = exc
+                self.ctx.log(f"tiktok_post: đọc trang Content lỗi (lần {attempt + 1}): {exc.reason}")
             if attempt + 1 < CONFIRM_TRIES:
                 time.sleep(CONFIRM_WAIT_SEC)
         return False
 
-    def _in_tab(self, work, keep_open: bool = False):
+    def _in_tab(self, work, keep_open=lambda page: False):
         try:
             with browser_context(self.ctx.config.flow.cdp_port) as context:
                 page = new_tab(context)  # background tab: Chrome stays behind the user's work
                 try:
                     result = work(page)
+                except StepFailure:
+                    raise
                 except (StudioError, ContentPageError) as exc:
                     raise StepFailure(str(exc), screenshot=capture_page_error(page, self.ctx.path("errors"))) from exc
                 except Exception as exc:
                     shot = capture_page_error(page, self.ctx.path("errors"))
                     reason = str(exc).splitlines()[0] if str(exc) else type(exc).__name__
                     raise StepFailure(f"Thao tác trên TikTok Studio lỗi: {reason}", screenshot=shot) from exc
-                if not keep_open:
-                    page.close()  # only on success: a failed tab stays open so the user can look at it
+                if not keep_open(page):
+                    try:
+                        page.close()  # housekeeping only: the result already stands
+                    except Exception:
+                        pass
                 return result
         except BrowserNotRunning as exc:
             raise StepFailure(str(exc)) from exc
@@ -99,24 +112,25 @@ def post_now_or_later(ctx: JobContext) -> JobState:
     clicked: dict[str, JobState] = {}
 
     def before_click() -> None:
+        if ctx.is_cancelled():
+            raise StepFailure("Job đã huỷ nên tool không bấm Post/Schedule.")
         clicked["job"] = ctx.update_job(lambda j: setattr(j.post, "submitted_at", now_iso()))
 
     try:
         studio.post(plan, before_click)
     except StepFailure as exc:
         if "job" in clicked:  # failed after the click: say so, never suggest a plain retry
+            ctx.log(f"tiktok_post: lỗi sau khi bấm: {exc.reason}")
             raise StepFailure(unconfirmed(clicked["job"]), screenshot=exc.screenshot) from exc
         raise
     if "job" not in clicked:
         raise StepFailure("Tool chưa bấm Post/Schedule (thao tác dừng giữa chừng). Bấm Thử lại.")
     submitted = clicked["job"]
     ctx.report(0.95, "Kiểm tra bài trên TikTok Studio")
-    try:
-        found = studio.find_post(plan.title, datetime.fromisoformat(submitted.post.submitted_at), plan.schedule_at)
-    except StepFailure:
-        found = False
+    found = studio.find_post(plan.title, datetime.fromisoformat(submitted.post.submitted_at), plan.schedule_at)
     if not found:
-        raise StepFailure(unconfirmed(submitted))
+        last = getattr(studio, "last_error", None)
+        raise StepFailure(unconfirmed(submitted), screenshot=last.screenshot if last else None)
     job = ctx.update_job(lambda j: setattr(j.post, "done_at", now_iso()))
     ctx.log(f"tiktok_post: {done_text(job)}")
     return job
