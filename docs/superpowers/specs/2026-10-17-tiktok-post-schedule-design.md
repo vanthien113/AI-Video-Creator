@@ -45,7 +45,7 @@ Job "Xong" ──► [📤 Đăng ngay] / [🗓 Lên lịch]  (tool hoặc Teleg
                  ▼
             Job "Xong" + kết quả đăng
                  │
-                 ├─► tool: dòng "✅ Đã đăng TikTok lúc 10:32" / "🗓 Đã lên lịch TikTok: 19:00 thứ Bảy 18/10"
+                 ├─► tool: dòng "✅ Đã đăng TikTok lúc 10:32" / "🗓 Đã lên lịch TikTok: 19:00 Chủ nhật 18/10"
                  └─► Telegram: sửa tin "Đang", sửa tin 2 nút, gửi tin mới báo kết quả
 ```
 
@@ -102,31 +102,31 @@ Phần chung với bước lưu nháp được tách khỏi `tiktok/studio_uploa
 
 Thứ tự thao tác, mỗi việc báo tiến trình lên tool:
 
-1. **(Lên lịch)** Mở tab nền `tiktok.content_url`, đọc thời gian các bài đầu danh sách (§8), đóng tab. Tính khung giờ (§7), ghi `post.scheduled_for`.
+1. **(Lên lịch)** Mở tab nền `tiktok.content_url`, đọc thời gian các bài (§8), đóng tab. Tính khung giờ (§7), ghi `post.scheduled_for`.
 2. Mở tab nền `tiktok.post_url`; chưa đăng nhập TikTok thì dừng như bước lưu nháp.
-3. Tải file đã xuất (`job.export_path`, thiếu thì `final-4k60.mp4`) và chờ TikTok báo "Uploaded" (tối đa `tiktok.timeout_sec`).
-4. Điền mô tả `tên sản phẩm` + xuống dòng + `#a #b #c` (không có hashtag thì chỉ tên), cắt ở `MAX_DESCRIPTION` (2000 ký tự, hằng số đang có trong `studio_upload.py`).
-5. **Add link**: mở hộp thêm link sản phẩm, tìm theo ID, chọn dòng **khớp đúng ID**, xác nhận. Không thấy → `StepFailure("Không tìm thấy sản phẩm <id> khi Add link. Kiểm tra sản phẩm đã có trong showcase/shop của tài khoản TikTok này rồi bấm Thử lại.")`. Chưa có gì được đăng nên Thử lại an toàn.
+3. Tải file đã xuất (`job.export_path`, thiếu thì `final-4k60.mp4`) và chờ ô `upload_status_container` báo "Uploaded" (tối đa `tiktok.timeout_sec`). Không dựa vào chữ trên cả trang: trang luôn có câu "Checks can only start after the file is uploaded."
+4. Điền tên sản phẩm (cắt ở `MAX_DESCRIPTION` = 2000), xuống dòng, rồi **gõ từng hashtag và chọn đúng tag đó trong danh sách gợi ý** của TikTok (mũi tên xuống tới tag, Enter) để thành hashtag thật. Tag không có trong gợi ý thì để dạng chữ và đăng tiếp. Dán cả chuỗi `#a #b #c` chỉ ra chữ thường (khảo sát §12).
+5. **Add link**: nút Add → hộp "Add link" (Link type mặc định Products) → Next → hộp "Add product links": gõ ID vào "Search products", Enter, chọn dòng có cột Product ID **khớp đúng ID** → Next → ô "Product name" (TikTok điền sẵn, tối đa 30 ký tự) → Add. TikTok báo "Remove invalid characters: …" thì bỏ các ký tự đó rồi Add lại (tối đa 3 lần). Không có dòng nào khớp trong 15 giây → đóng hộp, `StepFailure("Không tìm thấy sản phẩm <id> khi Add link. Kiểm tra sản phẩm đã có trong showcase/shop của tài khoản TikTok này rồi bấm Thử lại.")`. Chưa có gì được đăng nên Thử lại an toàn.
 6. Bật **AI-generated content** (bấm Show more nếu đang thu gọn).
-7. **Settings → When to post**: chọn Now hoặc Schedule. Với Schedule: chọn ngày và giờ trên bộ chọn, rồi đọc lại giá trị hiển thị; khác `scheduled_for` thì dừng trước khi bấm.
-8. Kiểm tra lần cuối: mô tả còn nguyên, link sản phẩm đã gắn, nhãn AI đang bật, nút sắp bấm đúng là Post/Schedule. Ghi `post.submitted_at` (lưu xuống đĩa), rồi bấm.
-9. Hộp thoại kiểu "kiểm tra nội dung chưa xong, vẫn đăng?" → chọn đăng tiếp.
-10. Chờ xác nhận (chuyển sang trang Content, hoặc thông báo đã đăng / đã lên lịch). Có → ghi `post.done_at`, đóng tab. Hết giờ → lỗi theo dòng thứ ba của bảng trên; tab giữ nguyên để xem.
+7. **Settings → When to post**: chọn Now hoặc Schedule. Với Schedule: chọn ngày trên lịch trước, rồi giờ và phút, rồi đọc lại hai ô; khác `scheduled_for` thì dừng trước khi bấm.
+8. Kiểm tra lần cuối: mô tả còn tên sản phẩm, link sản phẩm đang hiện trên form, nhãn AI đang bật, When to post đúng lựa chọn, nút có `data-e2e=post_video_button` và chữ đúng là "Post"/"Schedule". Ghi `post.submitted_at` (lưu xuống đĩa), rồi bấm.
+9. Trong tối đa 90 giây sau khi bấm: hộp hỏi lại kiểu "Post now" / "Post anyway" (chưa khảo sát được vì phải đăng thật; danh sách nút trong `tiktok-selectors.yaml`) → bấm; trang rời khỏi form tải lên → thôi chờ.
+10. **Xác nhận trên trang Content** (§8): tìm bài có mô tả bắt đầu bằng tên sản phẩm, tạo sau lúc bấm (cho lệch 2 phút) và, khi lên lịch, đúng giờ đã chọn; đọc lại tối đa 6 lần, cách nhau 20 giây. Thấy → ghi `post.done_at`. Không thấy → lỗi theo dòng thứ ba của bảng trên.
 
 Lỗi Playwright hoặc `StudioError` → `StepFailure` kèm ảnh chụp màn hình + HTML vào `errors/` như các bước khác.
 
 ## 7. Chọn khung giờ
 
-Hàm thuần `next_slot(latest_page, tool_scheduled, now, slots, lead_min) -> datetime`:
+Hàm thuần `next_slot(now, slots, lead_min, taken) -> datetime`, với `taken` = `[latest_page, *tool_scheduled]`:
 
-- `floor = max(latest_page, max(tool_scheduled), now + lead_min phút)`; giá trị nào thiếu thì bỏ qua.
+- `floor = max(now + lead_min phút, *taken)`; giá trị nào thiếu (`None`) thì bỏ qua.
   - `latest_page`: thời gian muộn nhất đọc được trên trang Content (bài đã đăng và bài đã lên lịch).
   - `tool_scheduled`: `post.scheduled_for` của các job khác đã bấm Schedule (`submitted_at` có), đề phòng TikTok chưa kịp hiện bài vừa lên lịch trong danh sách.
 - Kết quả = khung đầu tiên **lớn hơn hẳn** `floor`, xét từ ngày của `floor`; hết khung trong ngày thì lấy khung đầu của ngày hôm sau.
 - Giờ là giờ máy Mac (TikTok Studio hiển thị theo múi giờ của trình duyệt trên chính máy này).
-- Sau khi tính, bước `tiktok_post` so với giới hạn lên lịch trước của TikTok (đo khi khảo sát, §12, ghi thành hằng số trong `studio_post.py`); vượt → `StepFailure` báo rõ khung giờ tính ra và giới hạn.
+- Sau khi tính, bước `tiktok_post` so với giới hạn lên lịch của TikTok: hôm nay + 30 ngày (khảo sát §12, hằng số `MAX_DAYS_AHEAD` trong `tiktok/post_plan.py`); vượt → `StepFailure` báo rõ khung giờ tính ra và giới hạn.
 
-Ví dụ (`slots` = 7…23 lẻ, `lead_min` = 20, bây giờ 10:00 thứ Sáu 17/10):
+Ví dụ (`slots` = 7…23 lẻ, `lead_min` = 20, bây giờ 10:00 thứ Bảy 17/10):
 
 | Bài muộn nhất | Kết quả | Vì sao |
 |---|---|---|
@@ -140,26 +140,31 @@ Ví dụ (`slots` = 7…23 lẻ, `lead_min` = 20, bây giờ 10:00 thứ Sáu 17
 
 ## 8. Đọc trang Content
 
-Module `tiktok/studio_content.py`: mở `tiktok.content_url` trong tab nền, chờ danh sách bài hiện, đọc thời gian của mọi bài TikTok tải sẵn khi mở trang (không cuộn thêm; bài đã lên lịch mang giờ dự kiến) và trả về thời gian muộn nhất (hoặc `None` khi chưa có bài nào). Cách đọc (selector, định dạng ngày giờ, giao diện tiếng Anh) chốt sau khảo sát; phần chuyển chữ thành `datetime` là hàm thuần, có test.
+Module `tiktok/studio_content.py`. Trang Content nhúng sẵn lượt bài đầu tiên dưới dạng JSON trong `<script id="__Creator_Center_Context__" type="application/json">`, khoá `firstBatchQueryItems.item_list` (khảo sát §12). Tool đọc JSON đó, không đọc chữ trên giao diện:
 
-Không đọc được trang (lỗi, đổi giao diện) → `StepFailure`, **không** đoán khung giờ.
+- Mỗi bài có `desc`, `create_time`, `post_time` (epoch giây; bài đã lên lịch thì là giờ sẽ đăng), `schedule_time` (chỉ bài đã lên lịch), `status` (140 = đã lên lịch, 102 = công khai), `is_pinned`.
+- Thứ tự: bài đã lên lịch trên cùng, rồi bài ghim, rồi các bài khác mới nhất trước. Vì vậy "thời gian đăng mới nhất" là **giá trị lớn nhất** (`schedule_time`, không có thì `post_time`), không phải dòng đầu.
+- Dùng lại để xác nhận bài vừa đăng (§6 bước 10): so mô tả sau khi bỏ dấu câu và khoảng trắng thừa, vì TikTok có thể đổi ký tự (tên "Dép sục+Tặng…" lên TikTok thành "Dép sục Tặng…").
+
+Phần đọc JSON và so khớp là hàm thuần, có test với HTML mẫu. Không đọc được trang hoặc không thấy JSON (lỗi, đổi giao diện) → `StepFailure`, **không** đoán khung giờ.
 
 ## 9. Báo kết quả
 
 **Tool**
 - Khung "Xong" của job tạo từ link, chưa bấm nút: 2 nút **📤 Đăng ngay** và **🗓 Lên lịch** (bấm là chạy).
 - Đang chạy: thanh bước có thêm ô "Đăng TikTok" (chỉ hiện với job đã bấm nút); dòng tiến trình hiện việc đang làm ("Đọc lịch đăng", "Tải video lên", "Gắn link sản phẩm", "Chọn 19:00 18/10", …).
-- Xong: thay 2 nút bằng dòng "✅ Đã đăng TikTok lúc 10:32" hoặc "🗓 Đã lên lịch TikTok: 19:00 thứ Bảy 18/10".
+- Xong: thay 2 nút bằng dòng "✅ Đã đăng TikTok lúc 10:32" hoặc "🗓 Đã lên lịch TikTok: 19:00 Chủ nhật 18/10".
 - Lỗi: khung lỗi như các bước khác (lý do, ảnh chụp, Thử lại). Nếu `submitted_at` đã có, Thử lại hỏi "Tool đã bấm Post/Schedule trước đó, thử lại có thể đăng 2 lần. Tiếp tục?".
 
 **Telegram** — job tạo từ bot:
-1. Cuối bước "Gửi Telegram", sau tin tên + hashtag: gửi tin riêng "📤 Đăng video này lên TikTok?" với 2 nút `📤 Đăng ngay` (`t:<token>:n`) và `🗓 Lên lịch` (`t:<token>:s`), trả lời dưới tin link. Ghi `offer_token`, `offer_message`; Thử lại không gửi lại khi `offer_message` đã có.
+1. Sau tin tên + hashtag (bước "Gửi Telegram"), khi job đi qua bước `tiktok_post` mà chưa ai bấm nút (tức ngay trước khi job "Xong"): gửi tin riêng "📤 Đăng video này lên TikTok?" với 2 nút `📤 Đăng ngay` (`t:<token>:n`) và `🗓 Lên lịch` (`t:<token>:s`), trả lời dưới tin link. Ghi `offer_token`, `offer_message`; Thử lại không gửi lại khi `offer_message` đã có. Gửi lỗi chỉ ghi log, không làm hỏng job (vẫn bấm được trên tool). Gửi ở đây thay vì trong bước "Gửi Telegram" để lúc tin đến, job đã sắp xong, bấm là nhận ngay.
 2. Bấm nút → `request_post`; tin 2 nút đổi thành "⏳ Đã nhận: Đăng ngay / Lên lịch. Đang chờ lượt…" (mất nút). Đã yêu cầu ở bên kia rồi thì hiện toast "Video này đã được yêu cầu đăng" và gỡ nút.
-3. Tin "Đang" (`StatusNotifier`): khi chạy bước này hiện "⏳ Đang: Đăng TikTok" / "⏳ Đang: Lên lịch TikTok"; khi xong hiện "✅ Đã đăng TikTok" / "🗓 Đã lên lịch TikTok 19:00 18/10" thay cho "✅ Xong".
+3. Tin "Đang" (`StatusNotifier`): khi chạy bước này hiện "⏳ Đang: Đăng TikTok" / "⏳ Đang: Lên lịch TikTok"; khi xong hiện "✅ Đã đăng TikTok" / "🗓 Đã lên lịch TikTok 19:00 18/10" thay cho "✅ Xong". Job đi qua bước này mà chưa ai bấm nút thì hiện "✅ Xong" luôn (bước không làm gì).
+6. Bấm vào nút của một tin cũ (video đã làm lại nên trạng thái đăng đã xoá): toast "Nút này đã cũ, dùng tin mới nhất hoặc nút trên tool.", không đăng gì.
 4. Đăng xong:
-   - **tin 2 nút** đổi thành "✅ Đã đăng lên TikTok lúc 10:32" / "🗓 Đã lên lịch đăng TikTok: 19:00 thứ Bảy 18/10";
-   - **tin mới**, trả lời dưới tin link: "✅ Đã đăng lên TikTok: <tên>" / "🗓 Đã lên lịch đăng TikTok lúc 19:00 thứ Bảy 18/10: <tên>". Gửi được thì ghi `notified`; lỗi mạng → `StepFailure("Đã đăng nhưng nhắn Telegram lỗi…")`, Thử lại chỉ nhắn lại (vì `done_at` đã có).
-5. Lỗi: tin báo lỗi kèm ảnh chụp như mọi bước (đã có sẵn); tin 2 nút đổi thành "❌ Đăng lỗi, mở AI Video Creator để thử lại". Thử lại làm trên tool.
+   - **tin 2 nút** đổi thành "✅ Đã đăng lên TikTok lúc 10:32" / "🗓 Đã lên lịch đăng TikTok: 19:00 Chủ nhật 18/10";
+   - **tin mới**, trả lời dưới tin link: "✅ Đã đăng lên TikTok: <tên>" / "🗓 Đã lên lịch đăng TikTok lúc 19:00 Chủ nhật 18/10: <tên>". Gửi được thì ghi `notified`; lỗi mạng → `StepFailure("Đã đăng nhưng nhắn Telegram lỗi…")`, Thử lại chỉ nhắn lại (vì `done_at` đã có).
+5. Lỗi: tin báo lỗi kèm ảnh chụp như mọi bước (đã có sẵn); tin 2 nút đổi thành "❌ Đăng lỗi, mở AI Video Creator để thử lại" (trừ khi bài đã lên và chỉ tin nhắn Telegram lỗi). Thử lại làm trên tool.
 
 Job tạo bằng cách dán link trên tool: 2 nút chỉ có trên tool; tin "Đang" và tin báo kết quả gửi cho ID Telegram đầu tiên (`notify_target`, như bước lưu nháp).
 
@@ -178,7 +183,7 @@ Code: `telegram/telegram_post.py` (bàn phím 2 nút, đọc dữ liệu nút, `
 
 `tiktok_post` không phụ thuộc `tiktok.save_draft`; dùng chung `ai_generated_label` và `timeout_sec`.
 
-`tiktok-selectors.yaml` (thêm, giá trị chốt sau khảo sát): nút Add link, ô tìm sản phẩm, dòng sản phẩm và nút xác nhận trong hộp Add link, lựa chọn Now / Schedule, bộ chọn ngày, bộ chọn giờ, nút Post / Schedule (theo `data-e2e` nếu có), hộp "vẫn đăng", chữ xác nhận đã đăng / đã lên lịch, dòng bài và ô thời gian trên trang Content.
+`tiktok-selectors.yaml` (thêm, theo khảo sát §12): ô trạng thái tải lên, nút Add link và vùng link, hai hộp Add link / Add product links và các phần bên trong (ô tìm, dòng sản phẩm, cột ID, nút Next / Add / Cancel, ô Product name), lựa chọn Now / Schedule, lịch chọn ngày, danh sách gợi ý hashtag, nút Post / Schedule và chữ trên nút, các nút "vẫn đăng" có thể hiện sau khi bấm, câu báo ký tự không hợp lệ. JSON của trang Content là cấu trúc dữ liệu, nằm trong code (`studio_content.py`).
 
 ## 11. Lỗi
 
@@ -195,24 +200,25 @@ Code: `telegram/telegram_post.py` (bàn phím 2 nút, đọc dữ liệu nút, `
 | Telegram lỗi sau khi đã đăng | `StepFailure`; Thử lại chỉ nhắn lại |
 | Huỷ job khi đang chờ đăng | Job thành Đã huỷ như mọi job; video đã xuất vẫn còn trên Mac |
 
-## 12. Khảo sát trước khi code
+## 12. Kết quả khảo sát (2026-10-17)
 
-Task đầu tiên của plan, hỏi người dùng trước khi chạy và chọn lúc tool không có job nào đang chạy. Chỉ mở trang và đọc DOM trong **tab nền** của Chrome riêng của tool; **không bấm Post hay Schedule**. Cần biết:
+Làm trong tab nền của Chrome riêng của tool, lúc không có job nào chạy, giao diện tiếng Anh, **không bấm Post / Schedule / Save draft**. Trước và sau khảo sát: 79 bài, 1 bản nháp.
 
-- Hộp Add link: các bước, ô tìm có nhận ID không, cách nhận ra dòng khớp ID.
-- When to post: Now / Schedule; bộ chọn ngày và giờ (có chọn được phút :00 không), giới hạn lên lịch trước bao nhiêu ngày.
-- Trang Content: cách hiển thị bài đã lên lịch và định dạng thời gian.
-- Gõ `#tag` bằng `insert_text` có thành hashtag thật không (nếu không, cần gõ từng hashtag và chọn trong gợi ý).
-- Tên và `data-e2e` của nút Post / Schedule, hộp hỏi "vẫn đăng", tín hiệu xác nhận sau khi bấm.
-
-Kết quả khảo sát ghi vào `tiktok-selectors.yaml` (kèm ngày khảo sát) và docstring của các module mới.
+- **Tải lên:** `[data-e2e=upload_status_container]` hiện "Uploaded（30.44MB）" khi xong. Câu "Checks can only start after the file is uploaded." luôn có trên trang, nên mẫu `\buploaded\b` áp lên cả trang sẽ báo xong quá sớm (bước lưu nháp hiện tại đang mắc lỗi này; phần dùng chung sửa luôn).
+- **Add link:** `[data-e2e=anchor_container]` có nút "Add". Hộp "Add link" (Link type: Products) → Next → hộp "Add product links", tab "Showcase products", ô `placeholder="Search products"`, bảng cột Product name / **Product ID** / Price / Stock / Status, mỗi dòng một radio; Next bị khoá tới khi chọn. Tìm `1737383451447231991` ra đúng 1 dòng; tìm `1737477284468917824` (không có trong showcase) ra bảng trống, không có chữ báo. Next → ô "Product name" điền sẵn 30 ký tự; "[JOLY 01] Dép sục+Tặng 1 bộ ch" bị từ chối với "Remove invalid characters: +", bỏ "+" thì Add được, cả hai hộp đóng và tên hiện trong `anchor_container`.
+- **When to post:** `[data-e2e=schedule_container]`, radio `name=postSchedule` giá trị `post_now` / `schedule` (đọc `aria-checked`). Chọn Schedule hiện ô giờ chỉ đọc (`10:40`, gợi ý sẵn khoảng 15 phút sau) với cột giờ 00–23 rồi cột phút 00–55 (bước 5 phút), và ô ngày chỉ đọc (`2026-10-17`) với lịch `.calendar-wrapper` (`.month-title`, `.year-title`, hai `.arrow`, ngày chọn được là `span.day.valid`). Ngày chọn được: 17/10 → 16/11, tức **hôm nay + 30 ngày**. Chọn 19 rồi 00 → ô giờ `19:00`; chọn ngày 18 → ô ngày `2026-10-18`, giờ giữ nguyên. Nút đổi chữ thành "Schedule", vẫn `data-e2e=post_video_button`.
+- **Hashtag:** dán hay gõ `#tag` chỉ ra chữ thường. Gõ `#giaybupbe` mở danh sách `[role=option]` (`.hash-tag-topic` "#giaybupbe", "368.0K posts"), dòng đầu được chọn sẵn (`aria-selected=true`); Enter biến chữ thành `span[data-testid=mentionText]` và tự thêm dấu cách. Bấm chuột vào gợi ý không được trong tab nền (danh sách nằm ngoài khung nhìn).
+- **Nhãn AI:** có thêm `[data-e2e=aigc_container]`; code cũ tìm theo chữ vẫn dùng được.
+- **Trang Content:** xem §8. Lúc khảo sát (10:19) dòng đầu là bài đã lên lịch 11:20 cùng ngày (`status` 140), tiếp đến 3 bài ghim từ tháng 7–8, rồi các bài mới nhất.
+- **Chưa khảo sát được** (phải đăng thật): hộp hỏi lại sau khi bấm Post/Schedule và trang hiện gì sau đó. Vì vậy tool xác nhận bằng trang Content (§6 bước 10) và lần đăng thật đầu tiên do người dùng bấm.
 
 ## 13. Kiểm thử
 
 **pytest (không mạng, không Chrome):**
 - `next_slot`: các ví dụ ở §7, cộng `tool_scheduled` muộn hơn trang Content, và vượt giới hạn ngày.
 - Lấy ID sản phẩm: link `/pdp/<id>` có và không có query, link rút gọn (không lấy được), ưu tiên `product_id` đã lưu.
-- Chuyển chữ thời gian trên trang Content thành `datetime`.
+- Đọc JSON của trang Content (HTML mẫu): thời gian muộn nhất (bài ghim nằm trên bài mới hơn), tìm bài vừa đăng (TikTok đổi dấu câu), thiếu JSON thì báo lỗi.
+- Phần thuần của thao tác form: bỏ ký tự không hợp lệ khỏi tên sản phẩm, chọn hashtag trong gợi ý (giả lập danh sách), selector file có đủ mục.
 - `request_post`: chỉ job Xong, chỉ job từ link, không có ID thì từ chối, không cho yêu cầu lần hai.
 - Bước `tiktok_post` (thay phần trình duyệt bằng giả lập như test lưu nháp): `mode` trống không làm gì; `done_at` có thì chỉ nhắn; `submitted_at` có thì dừng mà không gọi trình duyệt; thành công ghi `submitted_at` trước khi bấm và `done_at` sau đó.
 - `retry` và `recover()` theo §5.
