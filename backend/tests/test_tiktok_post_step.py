@@ -6,7 +6,7 @@ from datetime import datetime, timedelta
 import pytest
 
 from app.config import TelegramConfig
-from app.job_models import JobState, SourceInfo, TelegramMessageRef, TelegramOrigin, TikTokPostState
+from app.job_models import JobState, JobStatus, SourceInfo, TelegramMessageRef, TelegramOrigin, TikTokPostState
 from app.steps import tiktok_post_step
 from app.steps.step_types import StepFailure
 from app.steps.tiktok_post_step import BrowserStudio, other_scheduled, run_tiktok_post
@@ -22,6 +22,7 @@ class FakeStudio:
     def __init__(self):
         self.items, self.found, self.fail = [], True, None
         self.posted, self.clicks, self.boom, self.last_error = [], 0, None, None
+        self.results, self.find_calls = [], []  # results: answers of the next find_post calls, then `found`
 
     def latest(self, when: datetime):
         self.items = [{"desc": "bài cũ", "post_time": str(int(when.timestamp()))}]
@@ -38,8 +39,9 @@ class FakeStudio:
             raise self.boom
         self.clicks += 1
 
-    def find_post(self, title, since, schedule_at):
-        return self.found
+    def find_post(self, title, since, schedule_at, tries=6):
+        self.find_calls.append((since, schedule_at, tries))
+        return self.results.pop(0) if self.results else self.found
 
 
 class FakeApi:
@@ -271,6 +273,7 @@ def test_failure_after_the_click_says_the_click_happened(rig):
     build, studio, _, _ = rig
     ctx = build("now")
     studio.boom = StepFailure("boom", screenshot="errors/x.png")
+    studio.found = False
     with pytest.raises(StepFailure, match="Tool đã bấm Post") as info:
         run_tiktok_post(ctx)
     assert info.value.screenshot == "errors/x.png"
@@ -284,3 +287,114 @@ def test_cancelled_job_is_not_clicked(rig):
     with pytest.raises(StepFailure, match="huỷ"):
         run_tiktok_post(ctx)
     assert studio.clicks == 0 and ctx.job.post.submitted_at is None
+
+
+def test_error_after_the_click_still_checks_the_content_page(rig):
+    build, studio, _, _ = rig
+    ctx = build("now")
+    studio.boom = RuntimeError("Target closed")
+    run_tiktok_post(ctx)  # found on Content: the post went out
+    assert studio.find_calls and ctx.job.post.done_at and studio.clicks == 0
+
+
+def test_unexpected_error_after_the_click_unfound_says_the_click_happened(rig):
+    build, studio, _, _ = rig
+    ctx = build("now")
+    studio.boom, studio.found = RuntimeError("Target closed"), False
+    with pytest.raises(StepFailure, match="Tool đã bấm Post"):
+        run_tiktok_post(ctx)
+    assert ctx.job.post.submitted_at and not ctx.job.post.done_at
+
+
+def test_job_cancelled_in_the_store_is_not_clicked(rig):
+    build, studio, _, _ = rig
+    ctx = build("now")
+    ctx.job.status = JobStatus.cancelled  # not through ctx.is_cancelled
+    with pytest.raises(StepFailure, match="huỷ"):
+        run_tiktok_post(ctx)
+    assert studio.clicks == 0 and ctx.job.post.submitted_at is None
+
+
+def test_find_post_survives_an_unexpected_read_error(rig, monkeypatch):
+    build, _, _, _ = rig
+    ctx = build("now")
+    monkeypatch.setattr(tiktok_post_step, "CONFIRM_WAIT_SEC", 0)
+    studio = BrowserStudio(ctx)
+    reads = []
+
+    def broken():
+        reads.append(1)
+        raise ValueError("bad json")
+
+    studio.content_items = broken
+    assert studio.find_post(TITLE, datetime.now(), None, tries=2) is False
+    assert len(reads) == 2 and isinstance(studio.last_error, StepFailure)
+
+
+def test_error_opening_the_tab_becomes_a_step_failure(rig, monkeypatch):
+    build, _, _, _ = rig
+    ctx = build("now")
+
+    @contextlib.contextmanager
+    def fake_context(port):
+        yield object()
+
+    def boom(context):
+        raise RuntimeError("Target closed")
+
+    monkeypatch.setattr(tiktok_post_step, "browser_context", fake_context)
+    monkeypatch.setattr(tiktok_post_step, "new_tab", boom)
+    with pytest.raises(StepFailure, match="Không mở được tab TikTok Studio"):
+        BrowserStudio(ctx)._in_tab(lambda page: None)
+
+
+def test_failed_content_read_closes_its_tab(rig, monkeypatch):
+    build, _, _, _ = rig
+    ctx = build("now")
+    page = FakePage("https://www.tiktok.com/tiktokstudio/content")
+
+    @contextlib.contextmanager
+    def fake_context(port):
+        yield object()
+
+    monkeypatch.setattr(tiktok_post_step, "browser_context", fake_context)
+    monkeypatch.setattr(tiktok_post_step, "new_tab", lambda context: page)
+    monkeypatch.setattr(tiktok_post_step, "capture_page_error", lambda p, d: None)
+
+    def broken(p, url):
+        raise tiktok_post_step.ContentPageError("không đọc được")
+
+    monkeypatch.setattr(tiktok_post_step, "read_items", broken)
+    with pytest.raises(StepFailure):
+        BrowserStudio(ctx).content_items()
+    assert page.closed is True
+
+
+def test_unexpected_error_still_marks_the_offer_failed(rig, monkeypatch):
+    build, studio, api, _ = rig
+    ctx = build("now")
+    monkeypatch.setattr(tiktok_post_step, "make_plan", lambda *a, **k: (_ for _ in ()).throw(RuntimeError("x")))
+    with pytest.raises(RuntimeError):
+        run_tiktok_post(ctx)
+    assert api.edits[-1] == (99, FAILED_TEXT)
+
+
+def test_recheck_finds_the_earlier_post_and_never_posts(rig):
+    build, studio, _, _ = rig
+    ctx = build("now")
+    ctx.job.post.recheck_since = "2026-10-17T10:31:00"
+    studio.found = True
+    run_tiktok_post(ctx)
+    post = ctx.job.post
+    assert studio.posted == [] and studio.clicks == 0 and post.done_at and post.recheck_since is None
+    assert post.submitted_at == "2026-10-17T10:31:00" and studio.find_calls[0][2] == 1
+
+
+def test_recheck_not_found_posts_normally(rig):
+    build, studio, _, _ = rig
+    ctx = build("now")
+    ctx.job.post.recheck_since = "2026-10-17T10:31:00"
+    studio.results = [False]  # the recheck; the confirmation after the new click then finds it
+    run_tiktok_post(ctx)
+    assert studio.clicks == 1 and ctx.job.post.done_at and ctx.job.post.recheck_since is None
+    assert ctx.job.post.submitted_at != "2026-10-17T10:31:00"

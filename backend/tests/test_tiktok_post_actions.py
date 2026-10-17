@@ -69,6 +69,7 @@ def test_retry_after_a_click_without_confirmation_is_the_users_call(rig):
     actions.retry(job_id, "tiktok_post")  # the UI warned "có thể đăng 2 lần" before sending this
     retried = store.get(job_id)
     assert retried.post.submitted_at is None and retried.post.mode == "now"
+    assert retried.post.recheck_since == "2026-10-17T10:31:00"  # the next run looks for that post first
 
 
 def test_retry_after_posting_keeps_the_post_and_a_new_video_resets_it(rig):
@@ -117,3 +118,19 @@ def test_post_endpoint(make_config):
         wait_for(client, job.id, lambda j: j["status"] == "done")
         assert client.post(f"/api/jobs/{job.id}/post", json={"mode": "now"}).status_code == 409
         assert client.post(f"/api/jobs/{job.id}/post", json={"mode": "later"}).status_code == 422
+
+
+def test_cancel_is_refused_once_the_click_happened(rig):
+    store, runner, actions, _, behaviour = rig
+    job_id = done_link_job(store, runner)
+
+    def clicked_then_lost(ctx):
+        ctx.update_job(lambda j: setattr(j.post, "submitted_at", "2026-10-17T10:31:00"))
+        raise StepFailure("không thấy bài")
+
+    behaviour["tiktok_post"] = clicked_then_lost
+    actions.request_post(job_id, "now")
+    drain(store, runner)
+    with pytest.raises(InvalidAction, match="không huỷ được nữa"):
+        actions.cancel(job_id)
+    assert store.get(job_id).status == JobStatus.failed

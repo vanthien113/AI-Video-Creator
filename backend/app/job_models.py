@@ -85,6 +85,7 @@ class TikTokPostState(BaseModel):
     scheduled_for: str | None = None  # local time, e.g. "2026-10-18T19:00:00"
     submitted_at: str | None = None
     done_at: str | None = None
+    recheck_since: str | None = None  # click time of an unconfirmed attempt: looked for before posting again
     notified: bool = False  # result message sent on Telegram
     offer_token: str | None = None  # carried in the Telegram button data
     offer_message: TelegramMessageRef | None = None  # the message with the two buttons

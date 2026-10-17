@@ -84,6 +84,7 @@ class JobActions:
                 j.tiktok = TikTokDraftState()  # a new video gets its own draft
                 j.post = TikTokPostState()  # ... and may be posted again
             elif step == "tiktok_post" and not j.post.done_at:
+                j.post.recheck_since = j.post.submitted_at  # the next run looks for that post first
                 j.post.submitted_at = None  # the UI warned that this may post twice
             j.current_step, j.feedback = step, feedback.strip()
             self._queue(j)
@@ -134,6 +135,8 @@ class JobActions:
         def mutate(j: JobState) -> None:
             if j.status in (JobStatus.done, JobStatus.cancelled):
                 raise InvalidAction("Job đã kết thúc.")
+            if j.current_step == "tiktok_post" and j.post.submitted_at and not j.post.done_at:
+                raise InvalidAction("Tool đã bấm Post/Schedule, không huỷ được nữa. Xem kết quả trên TikTok Studio.")
             j.status = JobStatus.cancelled
 
         return self._apply(job_id, mutate)

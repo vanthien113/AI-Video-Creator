@@ -55,7 +55,7 @@ telegram:                    # nhận link TikTok Shop gửi từ điện thoạ
   allowed_user_ids: []       # ID Telegram được phép gửi link; nên ghi vào .env (TELEGRAM_ALLOWED_USER_IDS) để không lên git
   auto_review: true          # job từ link: chọn ảnh xong tự chạy thẳng, không dừng duyệt
 
-tiktok:                      # sau khi xuất file: tải lên TikTok Studio và LƯU NHÁP (không bao giờ bấm Post)
+tiktok:                      # sau khi xuất file: tải lên TikTok Studio và LƯU NHÁP (bước nháp này không bao giờ bấm Post)
   save_draft: false          # TẠM TẮT. Bật lại: true (Chrome của tool phải đăng nhập TikTok trước)
   ai_generated_label: true   # bật nhãn "AI-generated content"; TikTok có thể gỡ video AI trông như thật mà không gắn nhãn
   timeout_sec: 600           # thời gian tối đa chờ tải video 4K lên

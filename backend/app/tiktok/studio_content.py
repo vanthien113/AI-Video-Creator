@@ -68,6 +68,8 @@ def find_new_post(items: list[dict], title: str, since: datetime, scheduled_for:
     turned "sục+Tặng" into "sục Tặng"), it was created after `since` and, when scheduled, goes out at
     `scheduled_for`."""
     head = _words(title)[:40]
+    if not head:
+        return None
     for item in items:
         try:
             created = datetime.fromtimestamp(int(item.get("create_time") or 0))

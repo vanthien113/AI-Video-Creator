@@ -18,7 +18,7 @@ import re
 import time
 from collections.abc import Callable
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 
 from ..config import TikTokConfig
@@ -29,6 +29,7 @@ from .studio_upload import (MAX_DESCRIPTION, StudioError, ai_label_on, fill_desc
 
 DATE_VALUE, TIME_VALUE = re.compile(r"^\d{4}-\d{2}-\d{2}$"), re.compile(r"^\d{2}:\d{2}$")
 PRODUCT_NAME_MAX = 30
+MIN_LEAD = timedelta(minutes=15)  # TikTok Studio only offers times about 15 minutes ahead
 
 
 class ProductNotFound(StudioError):
@@ -119,6 +120,9 @@ def post_video(page, cfg: TikTokConfig, plan: PostPlan, report: Callable[[float,
     button = check_ready(page, sel, texts, cfg, plan, product_name, label)
     log(f"tiktok_post: sẵn sàng bấm {label}: '{title[:40]}', {picked}/{len(plan.hashtags)} hashtag thật, "
         f"link '{product_name}'")
+    if schedule and plan.schedule_at - datetime.now() < MIN_LEAD:
+        raise StudioError(f"Khung {slot_label(plan.schedule_at)} chỉ còn chưa tới 15 phút (tải video lâu); "
+                          "tool dừng trước khi bấm Schedule. Bấm Thử lại để chọn khung mới.")
     if dry_run:
         report(1, f"Chạy thử xong, dừng trước khi bấm {label}")
         return
@@ -296,15 +300,23 @@ def wait_submitted(page, sel: FlowSelectors, log: Callable[[str], None], schedul
     Not seeing the form leave is not an error here; the Content page check that follows decides."""
     mode = "schedule" if schedule else "now"
     deadline = time.time() + timeout
+    answered: set[str] = set()  # each confirm button is answered once; after that we only wait
     while time.time() < deadline:
         page.wait_for_timeout(1500)
         if "/upload" not in page.url:
             return
         dialogs = sel.locate(page, "any_dialog")
         for spec in sel.data.get("confirm_post_buttons", {}).get(mode, []):
+            name = spec.get("name")
+            if name in answered:
+                continue
             button = build_locator(dialogs, spec)
             if button.count() and button.first.is_visible():
-                log(f"tiktok_post: TikTok hỏi lại, bấm '{spec.get('name')}'")
-                button.first.click(timeout=5000)
+                answered.add(name)
+                log(f"tiktok_post: TikTok hỏi lại, bấm '{name}'")
+                try:
+                    button.first.click(timeout=5000)
+                except Exception as exc:
+                    log(f"tiktok_post: không bấm được '{name}': {exc}")
                 break
     log("tiktok_post: sau khi bấm, trang tải lên vẫn còn; kiểm tra trên trang Content")

@@ -13,8 +13,8 @@ function ErrorPanel({ job, onChange }: Props) {
   const isFlow = FLOW_STEPS.includes(err.step);
   const retry = () => {
     if (err.step === "flow_generate" && !window.confirm("Thử lại bước sinh video sẽ gửi lại lên Flow và tốn credit. Tiếp tục?")) return;
-    if (err.step === "tiktok_post" && job.post.submitted_at
-      && !window.confirm("Tool đã bấm Post/Schedule trước đó. Kiểm tra TikTok Studio trước: thử lại có thể đăng video 2 lần. Tiếp tục?")) return;
+    if (err.step === "tiktok_post" && job.post.submitted_at && !job.post.done_at
+      && !window.confirm("Tool đã bấm Post/Schedule trước đó. Tool sẽ tìm bài đó trên TikTok Studio trước; không thấy thì đăng lại và có thể thành 2 bài. Tiếp tục?")) return;
     run(() => api.retry(job.id, err.step));
   };
   return (
@@ -91,7 +91,8 @@ function ProgressPanel({ job }: { job: Job }) {
 
 export default function JobDetailPanel({ job, onChange }: Props) {
   const { busy, run } = useJobAction(onChange);
-  const cancellable = !["done", "cancelled"].includes(job.status);
+  const clickedPost = job.current_step === "tiktok_post" && Boolean(job.post.submitted_at) && !job.post.done_at;
+  const cancellable = !["done", "cancelled"].includes(job.status) && !clickedPost;
 
   let body;
   if (job.status === "awaiting_review" && job.gate === "pick_image") body = <PickImagePanel job={job} onChange={onChange} />;

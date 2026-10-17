@@ -1,7 +1,7 @@
 """Pure parts of the TikTok Studio post form, and the selectors file it relies on (no browser)."""
 
 import re
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 
 import pytest
@@ -205,6 +205,29 @@ def test_now_mode_presses_post_now_only_inside_a_dialog():
     assert page.clicked == [("Post now", True)]
 
 
+def test_a_dialog_that_stays_visible_is_answered_once(monkeypatch):
+    def click_and_stay(self, timeout=None):
+        self.page.clicked.append((self.buttons[0].name, self.buttons[0].in_dialog))  # still on /upload
+
+    monkeypatch.setattr(Matches, "click", click_and_stay)
+    ticks = iter(range(0, 1000, 10))
+    monkeypatch.setattr(studio_post.time, "time", lambda: next(ticks))  # ~10 loops of 1.5 s
+    page = SubmitPage(UPLOAD, [Btn("Post now", in_dialog=True)])
+    wait_submitted(page, load_selectors()[0], [].append, schedule=False, timeout=100)
+    assert page.clicked == [("Post now", True)]
+
+
+def test_a_click_that_raises_never_escapes(monkeypatch):
+    def refuse(self, timeout=None):
+        raise RuntimeError("disabled")
+
+    monkeypatch.setattr(Matches, "click", refuse)
+    logs = []
+    page = SubmitPage(UPLOAD, [Btn("Post now", in_dialog=True)])
+    wait_submitted(page, load_selectors()[0], logs.append, schedule=False, timeout=0.05)
+    assert any("không bấm được" in line for line in logs)
+
+
 # ---- click order of post_video (helpers replaced by recorders) ----------------------------
 
 class ReadyButton:
@@ -259,6 +282,13 @@ def test_dry_run_never_clicks_post(monkeypatch):
     assert "before_click" not in events and "click" not in events and "wait_submitted" not in events
 
 
+def test_a_slot_less_than_15_minutes_away_stops_before_the_click(monkeypatch):
+    events = []
+    with pytest.raises(StudioError, match="15 phút"):
+        _run_post(monkeypatch, events, schedule_at=datetime.now() + timedelta(minutes=10))
+    assert "before_click" not in events and "click" not in events
+
+
 def test_post_now_runs_before_click_then_click_then_wait(monkeypatch):
     events = []
     calls = _run_post(monkeypatch, events)
@@ -270,7 +300,7 @@ def test_post_now_runs_before_click_then_click_then_wait(monkeypatch):
 
 def test_schedule_run_passes_schedule_mode_to_the_wait(monkeypatch):
     events = []
-    calls = _run_post(monkeypatch, events, schedule_at=datetime(2026, 10, 18, 15, 0))
+    calls = _run_post(monkeypatch, events, schedule_at=datetime.now() + timedelta(days=1))
     assert "choose_schedule" in events and "choose_when" not in events
     assert events[-3:] == ["before_click", "click", "wait_submitted"]
     assert calls["wait_submitted"][3] is True

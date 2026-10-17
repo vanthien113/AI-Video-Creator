@@ -63,3 +63,8 @@ def test_finds_the_post_just_made_even_when_tiktok_changes_punctuation():
     now_post = {**ours, "schedule_time": None, "post_time": epoch(17, 10, 31), "status": 102}
     assert find_new_post([now_post], title, clicked, None) is now_post
     assert find_new_post([POSTED], title, clicked, None) is None
+
+
+def test_empty_title_matches_nothing():
+    item = {"desc": "bài bất kỳ", "create_time": str(int(datetime(2026, 10, 18, 10).timestamp()))}
+    assert find_new_post([item], "  +!  ", datetime(2026, 10, 18, 9), None) is None
