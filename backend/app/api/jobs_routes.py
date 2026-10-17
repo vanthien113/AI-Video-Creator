@@ -2,6 +2,7 @@
 
 import json
 import re
+from typing import Literal
 
 from fastapi import APIRouter, File, Form, HTTPException, Request, UploadFile
 from fastapi.concurrency import run_in_threadpool
@@ -164,6 +165,17 @@ async def manual_video(request: Request, job_id: str, video: UploadFile = File(.
 def cancel(request: Request, job_id: str):
     svc = services(request)
     return guarded(lambda: job_payload(svc, svc.actions.cancel(job_id)))
+
+
+class PostBody(BaseModel):
+    mode: Literal["now", "schedule"]
+
+
+@router.post("/jobs/{job_id}/post")
+def post_on_tiktok(request: Request, job_id: str, body: PostBody):
+    """Đăng ngay / Lên lịch on TikTok for a finished link job."""
+    svc = services(request)
+    return guarded(lambda: job_payload(svc, svc.actions.request_post(job_id, body.mode)))
 
 
 @router.get("/events")

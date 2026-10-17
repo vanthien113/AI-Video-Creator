@@ -7,7 +7,8 @@ so an action can never act on a state the worker has already moved past.
 import json
 from collections.abc import Callable
 
-from .job_models import FLOW_STEPS, PICK_GATE, STEPS, FlowState, JobState, JobStatus, TikTokDraftState
+from .job_models import (FLOW_STEPS, PICK_GATE, STEPS, FlowState, JobState, JobStatus, TikTokDraftState,
+                         TikTokPostState)
 from .job_store import JobStore
 from .media.video_probe import probe_video
 from .pipeline_runner import PipelineRunner
@@ -81,6 +82,9 @@ class JobActions:
                 j.flow = FlowState(project_url=j.flow.project_url)  # an explicit re-run may submit again
             if STEPS.index(step) <= STEPS.index("export"):
                 j.tiktok = TikTokDraftState()  # a new video gets its own draft
+                j.post = TikTokPostState()  # ... and may be posted again
+            elif step == "tiktok_post" and not j.post.done_at:
+                j.post.submitted_at = None  # the UI warned that this may post twice
             j.current_step, j.feedback = step, feedback.strip()
             self._queue(j)
 

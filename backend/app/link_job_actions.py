@@ -2,12 +2,14 @@
 
 from .config import AppConfig
 from .job_actions import IMAGE_SUFFIXES, InvalidAction, JobActions
-from .job_models import GATES, PICK_GATE, JobState, JobStatus, TelegramOrigin
+from .job_models import GATES, PICK_GATE, JobState, JobStatus, TelegramOrigin, now_iso
 from .job_store import JobStore
 from .media.image_io import load_rgb
 from .pipeline_runner import PipelineRunner
+from .tiktok.post_plan import job_product_id
 
 FINISHED = (JobStatus.done, JobStatus.cancelled, JobStatus.failed)
+POST_MODES = ("now", "schedule")
 
 
 class LinkJobActions(JobActions):
@@ -85,6 +87,27 @@ class LinkJobActions(JobActions):
             if product_info is not None:
                 j.product_info = product_info.strip()[:2000]
             j.current_step = "cutout"
+            self._queue(j)
+
+        return self._apply(job_id, mutate)
+
+    def request_post(self, job_id: str, mode: str) -> JobState:
+        """Đăng ngay / Lên lịch from the tool or Telegram: queue the tiktok_post step of a finished link job, once."""
+        if mode not in POST_MODES:
+            raise InvalidAction("Chế độ đăng không hợp lệ.")
+
+        def mutate(j: JobState) -> None:
+            self._require_idle(j)
+            if j.post.mode:
+                raise InvalidAction("Video này đã được yêu cầu đăng.")
+            if j.status != JobStatus.done:
+                raise InvalidAction("Chỉ đăng được khi job đã xong.")
+            if j.source is None:
+                raise InvalidAction("Chỉ job tạo từ link TikTok Shop mới đăng được (cần ID sản phẩm để Add link).")
+            if not job_product_id(j):
+                raise InvalidAction("Không biết ID sản phẩm của job này; chạy lại bước Đọc TikTok.")
+            j.post.mode, j.post.requested_at = mode, now_iso()
+            j.current_step = "tiktok_post"
             self._queue(j)
 
         return self._apply(job_id, mutate)

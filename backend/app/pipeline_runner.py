@@ -45,6 +45,10 @@ class PipelineRunner:
                 self.fail(job.id, "flow_generate",
                           "Đã gửi lên Flow trước khi tắt tool — kiểm tra trên Flow rồi chọn "
                           "'Tôi đã sửa tay, tiếp tục' hoặc 'Thử lại' (sinh lại, tốn credit).")
+            elif job.current_step == "tiktok_post" and job.post.submitted_at and not job.post.done_at:
+                self.fail(job.id, "tiktok_post",
+                          "Tool đã bấm Post/Schedule trước khi tắt — kiểm tra TikTok Studio; "
+                          "nếu chưa có bài thì bấm 'Thử lại'.")
             else:
                 self.store.update(job.id, lambda j: setattr(j, "status", JobStatus.queued))
 
