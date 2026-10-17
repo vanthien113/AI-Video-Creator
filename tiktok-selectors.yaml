@@ -23,6 +23,11 @@ texts:
   ai_label_row: "AI-generated content|nội dung do AI tạo"
   draft_saved: "saved to drafts|draft saved|đã lưu vào bản nháp|đã lưu bản nháp"
   invalid_chars: "invalid characters?:\\s*(.+)"   # "Remove invalid characters: +" dưới ô Product name
+  # Mục Checks: mỗi mục kiểm tra chỉ hiện một dòng trạng thái (khảo sát 2026-10-17). Tool chờ hết dòng
+  # "đang kiểm tra" rồi mới bấm Post/Schedule; gặp dòng báo vấn đề thì dừng, không bấm.
+  checks_running: "Checking in progress"
+  checks_pending: "We.ll check your content"
+  checks_problem: "Content may be restricted|Something went wrong|reached your check limit"
 # ---- Đăng ngay / Lên lịch (khảo sát 2026-10-17, giao diện tiếng Anh, không bấm Post/Schedule) ----
 upload_status: {css: "[data-e2e=upload_status_container]"}   # "Uploaded（30.44MB）" khi tải xong
 post_button: {css: "[data-e2e=post_video_button]"}
@@ -66,9 +71,12 @@ time_options: {css: "span"}
 # Tên tháng trên lịch của TikTok (tiếng Anh)
 calendar_months: [January, February, March, April, May, June, July, August, September, October, November, December]
 
-# Hộp thoại TikTok có thể hỏi lại SAU KHI tool đã bấm Post/Schedule. Chưa khảo sát được (phải đăng thật):
-# tên nút là phỏng đoán. Tool chỉ bấm nút nằm trong hộp thoại, sau cú bấm Post/Schedule của chính nó,
-# và chỉ dùng danh sách của chế độ hiện tại.
+# Hộp thoại TikTok có thể hỏi lại SAU KHI tool đã bấm Post/Schedule. Tool chỉ bấm nút nằm trong hộp thoại,
+# sau cú bấm Post/Schedule của chính nó, và chỉ dùng danh sách của chế độ hiện tại.
+# Lần đăng thật đầu tiên (2026-10-17): bấm Schedule khi "Content check lite" còn chạy → hộp "Continue to post?"
+# (Cancel / Post now), cả ở chế độ lên lịch. Không rõ "Post now" ở đó giữ lịch hay đăng ngay, nên chế độ lên
+# lịch không bấm nó; tool chờ kiểm tra xong (checks_running ở trên) để hộp này không hiện. "Schedule anyway"
+# vẫn là phỏng đoán.
 confirm_post_buttons:
   now:
     - {role: button, name: "Post now", exact: true}

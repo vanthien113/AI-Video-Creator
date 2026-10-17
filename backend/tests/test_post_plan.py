@@ -91,7 +91,7 @@ def test_post_title_and_step_order():
 
 def test_tiktok_config_defaults_and_checks():
     cfg = TikTokConfig()
-    assert cfg.schedule_slots == SLOTS and cfg.schedule_lead_min == 20
+    assert cfg.schedule_slots == SLOTS and cfg.schedule_lead_min == 30 and cfg.check_wait_min == 15
     assert cfg.post_url == "https://www.tiktok.com/tiktokstudio/upload?from=creator_center&tab=video"
     assert cfg.content_url == "https://www.tiktok.com/tiktokstudio/content"
     assert TikTokConfig(schedule_slots=[21, 7, 7]).schedule_slots == [7, 21]

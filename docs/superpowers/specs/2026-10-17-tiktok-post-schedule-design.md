@@ -109,7 +109,7 @@ Thứ tự thao tác, mỗi việc báo tiến trình lên tool:
 5. **Add link**: nút Add → hộp "Add link" (Link type mặc định Products) → Next → hộp "Add product links": gõ ID vào "Search products", Enter, chọn dòng có cột Product ID **khớp đúng ID** → Next → ô "Product name" (TikTok điền sẵn, tối đa 30 ký tự) → Add. TikTok báo "Remove invalid characters: …" thì bỏ các ký tự đó rồi Add lại (tối đa 3 lần). Không có dòng nào khớp trong 15 giây → đóng hộp, `StepFailure("Không tìm thấy sản phẩm <id> khi Add link. Kiểm tra sản phẩm đã có trong showcase/shop của tài khoản TikTok này rồi bấm Thử lại.")`. Chưa có gì được đăng nên Thử lại an toàn.
 6. Bật **AI-generated content** (bấm Show more nếu đang thu gọn).
 7. **Settings → When to post**: chọn Now hoặc Schedule. Với Schedule: chọn ngày trên lịch trước, rồi giờ và phút, rồi đọc lại hai ô; khác `scheduled_for` thì dừng trước khi bấm.
-8. Kiểm tra lần cuối: mô tả còn tên sản phẩm, link sản phẩm đang hiện trên form, nhãn AI đang bật, When to post đúng lựa chọn, nút có `data-e2e=post_video_button` và chữ đúng là "Post"/"Schedule". Ghi `post.submitted_at` (lưu xuống đĩa), rồi bấm.
+8. Chờ mục **Checks** của TikTok hết dòng "Checking in progress" (tối đa `tiktok.check_wait_min`, mặc định 15 phút); gặp dòng báo vấn đề ("Content may be restricted", "Something went wrong", hết lượt kiểm tra trong ngày) thì dừng, không bấm. Chạy thử (`check_post`) bỏ qua bước chờ này. Kiểm tra lần cuối: mô tả còn tên sản phẩm, link sản phẩm đang hiện trên form, nhãn AI đang bật, When to post đúng lựa chọn, nút có `data-e2e=post_video_button` và chữ đúng là "Post"/"Schedule". Ghi `post.submitted_at` (lưu xuống đĩa), rồi bấm.
 9. Trong tối đa 90 giây sau khi bấm: hộp hỏi lại kiểu "Post now" / "Post anyway" (chưa khảo sát được vì phải đăng thật; danh sách nút trong `tiktok-selectors.yaml`) → bấm; trang rời khỏi form tải lên → thôi chờ.
 10. **Xác nhận trên trang Content** (§8): tìm bài có mô tả bắt đầu bằng tên sản phẩm, tạo sau lúc bấm (cho lệch 2 phút) và, khi lên lịch, đúng giờ đã chọn; đọc lại tối đa 6 lần, cách nhau 20 giây. Thấy → ghi `post.done_at`. Không thấy → lỗi theo dòng thứ ba của bảng trên.
 
@@ -178,7 +178,8 @@ Code: `telegram/telegram_post.py` (bàn phím 2 nút, đọc dữ liệu nút, `
   post_url: https://www.tiktok.com/tiktokstudio/upload?from=creator_center&tab=video
   content_url: https://www.tiktok.com/tiktokstudio/content
   schedule_slots: [7, 9, 11, 13, 15, 17, 19, 21, 23]   # giờ trong ngày, giờ máy
-  schedule_lead_min: 20                                # khung giờ phải cách bây giờ ít nhất chừng này phút
+  schedule_lead_min: 30                                # khung giờ phải cách bây giờ ít nhất chừng này phút (ban đầu 20; nâng lên 30 vì phải chờ TikTok kiểm tra trước khi bấm)
+  check_wait_min: 15                                   # chờ TikTok kiểm tra video tối đa chừng này phút
 ```
 
 `tiktok_post` không phụ thuộc `tiktok.save_draft`; dùng chung `ai_generated_label` và `timeout_sec`.
@@ -211,6 +212,7 @@ Làm trong tab nền của Chrome riêng của tool, lúc không có job nào ch
 - **Nhãn AI:** có thêm `[data-e2e=aigc_container]`; code cũ tìm theo chữ vẫn dùng được.
 - **Trang Content:** xem §8. Lúc khảo sát (10:19) dòng đầu là bài đã lên lịch 11:20 cùng ngày (`status` 140), tiếp đến 3 bài ghim từ tháng 7–8, rồi các bài mới nhất.
 - **Chưa khảo sát được** (phải đăng thật): hộp hỏi lại sau khi bấm Post/Schedule và trang hiện gì sau đó. Vì vậy tool xác nhận bằng trang Content (§6 bước 10) và lần đăng thật đầu tiên do người dùng bấm.
+- **Lần đăng thật đầu tiên (2026-10-17, lên lịch JOLY 13:00):** bấm Schedule khi "Content check lite" còn chạy (khoảng 5 phút sau khi tải lên) → hộp **"Continue to post?"** (Cancel / **Post now**), cả ở chế độ lên lịch; tool không bấm nên không có gì được đăng. Sau khi kiểm tra xong ("No issues found…"), Cancel rồi bấm Schedule → không hỏi lại, trang chuyển ngay sang Content, bài hiện với `status` 141, `schedule_time` 13:00. Thử lại trên job tìm thấy bài và đánh dấu xong, không đăng lần hai. Từ đó tool chờ kiểm tra xong rồi mới bấm (§6 bước 8). Trạng thái từng mục kiểm tra là các dòng `data-show=true/false`: "We'll check…", "Checking in progress…", "Something went wrong…", "Content may be restricted…", "No issues found…", "You've reached your check limit…".
 
 ## 13. Kiểm thử
 

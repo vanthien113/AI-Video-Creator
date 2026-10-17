@@ -123,7 +123,9 @@ class TikTokConfig(BaseModel):
     post_url: str = "https://www.tiktok.com/tiktokstudio/upload?from=creator_center&tab=video"
     content_url: str = "https://www.tiktok.com/tiktokstudio/content"
     schedule_slots: list[int] = Field(default_factory=lambda: [7, 9, 11, 13, 15, 17, 19, 21, 23], min_length=1)
-    schedule_lead_min: int = Field(20, ge=15)  # TikTok Studio only offers times about 15 minutes ahead or later
+    # TikTok Studio only offers times about 15 minutes ahead; the upload and its checks take some of the margin.
+    schedule_lead_min: int = Field(30, ge=15)
+    check_wait_min: int = Field(15, ge=1)  # wait for TikTok's content check before clicking Post/Schedule
     ai_generated_label: bool = True  # TikTok may take down realistic AI video that is not labelled
     timeout_sec: int = Field(600, ge=60)  # upload + processing of the exported file
 

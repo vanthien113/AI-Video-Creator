@@ -97,6 +97,7 @@ Cần: Chrome của tool đã đăng nhập TikTok bằng tài khoản bán hàn
 
 - Bấm **📤 Đăng ngay** hoặc **🗓 Lên lịch** ở khung "Xong" của job, hoặc trên tin "📤 Đăng video này lên TikTok?" của bot. Bấm là chạy, không hỏi lại. Mỗi video chỉ đăng một lần (làm lại video từ bước Xuất file thì đăng lại được).
 - **Lên lịch** đọc trang Content của TikTok Studio, lấy giờ của bài muộn nhất (tính cả bài đã lên lịch), rồi chọn khung kế tiếp trong `tiktok.schedule_slots` (mặc định 7, 9, 11, …, 23h), cách bây giờ ít nhất `tiktok.schedule_lead_min` phút; hết khung trong ngày thì sang 7h hôm sau. TikTok chỉ cho lên lịch trước tối đa 30 ngày.
+- Trước khi bấm Post/Schedule, tool chờ TikTok kiểm tra video xong (mục Checks, thường 5–10 phút, tối đa `tiktok.check_wait_min`). TikTok báo video có vấn đề (ví dụ "Content may be restricted") thì tool dừng, không đăng; xem tab TikTok Studio rồi tự quyết.
 - Xong thì tool hiện "✅ Đã đăng TikTok lúc 10:32" hoặc "🗓 Đã lên lịch TikTok: 19:00 Chủ nhật 18/10". Trên Telegram, tin "Đang" và tin có 2 nút được sửa thành kết quả, kèm một tin mới báo đã đăng (có giờ nếu lên lịch).
 - Không tìm thấy sản phẩm khi Add link: tool dừng, không đăng. Thêm sản phẩm vào showcase rồi bấm **Thử lại**.
 - Tool chỉ coi là đã đăng khi thấy bài trên trang Content. Đã bấm Post/Schedule mà không thấy bài thì job báo lỗi và tool **không tự bấm lại**: vào TikTok Studio kiểm tra, chưa có bài thì bấm **Thử lại** (tool hỏi lại vì có thể đăng 2 lần).

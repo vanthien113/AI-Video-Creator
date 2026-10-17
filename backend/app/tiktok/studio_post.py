@@ -12,6 +12,8 @@ Surveyed 2026-10-17 (English UI, nothing posted); selectors live in tiktok-selec
 - When to post: radios post_now / schedule. Schedule shows a read-only time input "HH:MM" (an hour column
   00–23 then a minute column 00–55 by 5) and a date input "YYYY-MM-DD" (calendar, today + 30 days). The post
   button keeps data-e2e=post_video_button and reads "Schedule".
+- First real post (2026-10-17): clicking Schedule while "Content check lite" was still running opened
+  "Continue to post?" (Cancel / Post now) even in schedule mode, so the tool now waits for the checks first.
 """
 
 import re
@@ -30,6 +32,7 @@ from .studio_upload import (MAX_DESCRIPTION, StudioError, ai_label_on, fill_desc
 DATE_VALUE, TIME_VALUE = re.compile(r"^\d{4}-\d{2}-\d{2}$"), re.compile(r"^\d{2}:\d{2}$")
 PRODUCT_NAME_MAX = 30
 MIN_LEAD = timedelta(minutes=15)  # TikTok Studio only offers times about 15 minutes ahead
+CHECK_START_GRACE = 60  # seconds a check may show only its intro line before it counts as switched off
 
 
 class ProductNotFound(StudioError):
@@ -117,6 +120,8 @@ def post_video(page, cfg: TikTokConfig, plan: PostPlan, report: Callable[[float,
     else:
         choose_when(page, sel, "post_now")
 
+    if not dry_run:  # a dry run is for looking at the form, not for waiting minutes on TikTok
+        wait_checks(page, texts, cfg.check_wait_min * 60, report, log)
     button = check_ready(page, sel, texts, cfg, plan, product_name, label)
     log(f"tiktok_post: sẵn sàng bấm {label}: '{title[:40]}', {picked}/{len(plan.hashtags)} hashtag thật, "
         f"link '{product_name}'")
@@ -130,6 +135,32 @@ def post_video(page, cfg: TikTokConfig, plan: PostPlan, report: Callable[[float,
     report(0.9, f"Bấm {label}")
     button.click()
     wait_submitted(page, sel, log, schedule)
+
+
+def wait_checks(page, texts: dict[str, re.Pattern], wait_sec: int, report: Callable[[float, str], None],
+                log: Callable[[str], None]) -> None:
+    """Wait until TikTok's checks (Checks section) are done: each check shows one status line at a time.
+    A problem line (content may be restricted, check failed, daily limit) stops the post before the click."""
+    def shown(key: str):
+        return page.get_by_text(texts[key]).filter(visible=True)
+
+    started, logged = time.time(), False
+    while True:
+        problem = shown("checks_problem")
+        if problem.count():
+            message = " ".join(problem.first.inner_text().split())[:200]
+            raise StudioError(f"TikTok báo khi kiểm tra video: {message} Tool dừng, chưa bấm; xem tab TikTok Studio.")
+        waited = time.time() - started
+        if not (shown("checks_running").count() or (waited < CHECK_START_GRACE and shown("checks_pending").count())):
+            return
+        if waited > wait_sec:
+            raise StudioError(f"TikTok vẫn đang kiểm tra video sau {wait_sec // 60} phút; tool dừng, chưa bấm. "
+                              "Bấm Thử lại sau ít phút.")
+        if not logged:
+            log("tiktok_post: TikTok còn đang kiểm tra video, chờ xong rồi mới bấm")
+            logged = True
+        report(0.85, "Chờ TikTok kiểm tra video trước khi bấm")
+        page.wait_for_timeout(5000)
 
 
 def add_hashtags(page, sel: FlowSelectors, tags: list[str], log: Callable[[str], None]) -> int:

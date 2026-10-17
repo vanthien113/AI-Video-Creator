@@ -63,7 +63,8 @@ tiktok:                      # sau khi xuất file: tải lên TikTok Studio và
   post_url: https://www.tiktok.com/tiktokstudio/upload?from=creator_center&tab=video
   content_url: https://www.tiktok.com/tiktokstudio/content    # đọc giờ của bài muộn nhất khi lên lịch
   schedule_slots: [7, 9, 11, 13, 15, 17, 19, 21, 23]          # khung giờ lên lịch (giờ máy); hết khung thì sang ngày sau
-  schedule_lead_min: 20      # khung giờ phải cách bây giờ ít nhất chừng này phút (TikTok cần ≥ 15)
+  schedule_lead_min: 30      # khung giờ phải cách bây giờ ít nhất chừng này phút (TikTok cần ≥ 15 lúc bấm; tải lên + chờ kiểm tra mất vài phút)
+  check_wait_min: 15         # chờ TikTok kiểm tra video (Content check lite, ~5–10 phút) xong rồi mới bấm Post/Schedule
 
 logo:                        # đè logo của bạn lên dấu ✦ của Flow (góc dưới phải) khi xuất video
   enabled: true              # false = giữ nguyên video như Flow trả về

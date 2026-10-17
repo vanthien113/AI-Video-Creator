@@ -4,7 +4,7 @@
 
 With --schedule it reads the Content page and picks the slot like the step does. It uploads the job's exported
 video into the form (nothing is posted), fills the title and hashtags, adds the product link, turns on the AI
-label, sets When to post, and stops. The tab stays open in the tool's Chrome, in the background: look at it, then
+label, sets When to post, and stops (it does not wait for TikTok's content check, the real step does). The tab stays open in the tool's Chrome, in the background: look at it, then
 close it to throw the upload away. The job's state is not changed. Run it while no job is running.
 """
 

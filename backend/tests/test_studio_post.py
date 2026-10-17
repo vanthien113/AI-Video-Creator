@@ -9,7 +9,7 @@ import pytest
 from app.config import TikTokConfig
 from app.tiktok import studio_post
 from app.tiktok.studio_post import (PostPlan, button_label, clean_product_name, invalid_chars, pick_suggestion,
-                                    post_video, wait_submitted)
+                                    post_video, wait_checks, wait_submitted)
 from app.tiktok.studio_upload import StudioError, load_selectors
 
 INVALID = re.compile(r"invalid characters?:\s*(.+)", re.I)
@@ -37,7 +37,8 @@ def test_selectors_file_has_every_key_the_post_uses():
                 "calendar_day", "hashtag_topics", "hashtag_selected", "hashtag_done", "any_dialog", "schedule_inputs",
                 "time_options"]:
         assert sel.spec(key)
-    assert {"login_page", "upload_done", "ai_label_row", "draft_saved", "invalid_chars"} <= set(texts)
+    assert {"login_page", "upload_done", "ai_label_row", "draft_saved", "invalid_chars", "checks_running",
+            "checks_pending", "checks_problem"} <= set(texts)
     assert len(sel.data["calendar_months"]) == 12
     confirm = sel.data["confirm_post_buttons"]
     assert confirm["now"] and confirm["schedule"]
@@ -228,6 +229,83 @@ def test_a_click_that_raises_never_escapes(monkeypatch):
     assert any("không bấm được" in line for line in logs)
 
 
+# ---- waiting for TikTok's checks before the click (status lines as shown on 2026-10-17) -----
+
+MUSIC_OK = "No issues found."
+INTRO = "We'll check your content for For You Feed eligibility."
+RUNNING = "Checking in progress. This will take about 10 minutes. Longer videos may take more time."
+DONE = "No issues found. However, your video could still be removed later if it violates our Community Guidelines."
+RESTRICTED = ("Content may be restricted. You can still post, but modifying it to follow our guidelines may "
+              "improve visibility. View details")
+
+
+class ShownText:
+    def __init__(self, page, pattern):
+        self.page, self.pattern = page, pattern
+
+    def filter(self, visible):
+        return self
+
+    def _hits(self):
+        return [t for t in self.page.states[self.page.i] if self.pattern.search(t)]
+
+    def count(self):
+        return len(self._hits())
+
+    @property
+    def first(self):
+        return self
+
+    def inner_text(self):
+        return self._hits()[0]
+
+
+class ChecksPage:
+    """The visible status lines of the Checks section; each wait moves on to the next state."""
+
+    def __init__(self, *states):
+        self.states, self.i, self.waits = list(states), 0, 0
+
+    def get_by_text(self, pattern):
+        return ShownText(self, pattern)
+
+    def wait_for_timeout(self, ms):
+        self.waits += 1
+        self.i = min(self.i + 1, len(self.states) - 1)
+
+
+def test_waits_while_the_content_check_runs_then_goes_on():
+    page, reports = ChecksPage([MUSIC_OK, RUNNING], [MUSIC_OK, RUNNING], [MUSIC_OK, DONE]), []
+    wait_checks(page, load_selectors()[1], 900, lambda p, m: reports.append(m), lambda m: None)
+    assert page.waits == 2 and reports and "kiểm tra" in reports[0]
+
+
+def test_a_problem_reported_by_tiktok_stops_before_the_click():
+    page = ChecksPage([MUSIC_OK, RUNNING], [MUSIC_OK, RESTRICTED])
+    with pytest.raises(StudioError, match="Content may be restricted"):
+        wait_checks(page, load_selectors()[1], 900, lambda p, m: None, lambda m: None)
+
+
+def test_a_check_that_never_ends_stops_before_the_click(monkeypatch):
+    ticks = iter([0, 0, 400, 400, 1000, 1000])
+    monkeypatch.setattr(studio_post.time, "time", lambda: next(ticks))
+    with pytest.raises(StudioError, match="vẫn đang kiểm tra"):
+        wait_checks(ChecksPage([MUSIC_OK, RUNNING]), load_selectors()[1], 900, lambda p, m: None, lambda m: None)
+
+
+def test_a_check_that_never_starts_is_treated_as_switched_off(monkeypatch):
+    monkeypatch.setattr(studio_post, "CHECK_START_GRACE", 0)
+    page = ChecksPage([MUSIC_OK, INTRO])
+    wait_checks(page, load_selectors()[1], 900, lambda p, m: None, lambda m: None)
+    assert page.waits == 0
+
+
+def test_finished_checks_need_no_wait():
+    page = ChecksPage([MUSIC_OK, DONE])
+    wait_checks(page, load_selectors()[1], 900, lambda p, m: None, lambda m: None)
+    assert page.waits == 0
+
+
 # ---- click order of post_video (helpers replaced by recorders) ----------------------------
 
 class ReadyButton:
@@ -263,6 +341,7 @@ def _run_post(monkeypatch, events, dry_run=False, schedule_at=None, check_error=
         "turn_on_ai_label": record("turn_on_ai_label"),
         "choose_when": record("choose_when"),
         "choose_schedule": record("choose_schedule"),
+        "wait_checks": record("wait_checks"),
         "check_ready": check_ready,
         "wait_submitted": record("wait_submitted"),
     }.items():
@@ -280,6 +359,7 @@ def test_dry_run_never_clicks_post(monkeypatch):
     _run_post(monkeypatch, events, dry_run=True)
     assert events[-1] == "check_ready"
     assert "before_click" not in events and "click" not in events and "wait_submitted" not in events
+    assert "wait_checks" not in events  # a dry run looks at the form, it does not wait minutes for TikTok
 
 
 def test_a_slot_less_than_15_minutes_away_stops_before_the_click(monkeypatch):
@@ -293,7 +373,7 @@ def test_post_now_runs_before_click_then_click_then_wait(monkeypatch):
     events = []
     calls = _run_post(monkeypatch, events)
     assert events == ["open_upload_form", "upload_video", "fill_description", "add_hashtags",
-                      "add_product_link", "turn_on_ai_label", "choose_when", "check_ready",
+                      "add_product_link", "turn_on_ai_label", "choose_when", "wait_checks", "check_ready",
                       "before_click", "click", "wait_submitted"]
     assert calls["wait_submitted"][3] is False
 
