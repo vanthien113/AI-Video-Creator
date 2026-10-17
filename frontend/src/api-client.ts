@@ -3,6 +3,7 @@
 export type JobStatus = "queued" | "running" | "awaiting_review" | "failed" | "done" | "cancelled";
 export type Gate = "cutout" | "prompt" | "flow_video";
 export type JobGate = Gate | "pick_image";
+export type PostMode = "now" | "schedule";
 
 export interface Job {
   id: string;
@@ -15,7 +16,8 @@ export interface Job {
   auto_gates: Record<Gate, boolean>;
   note: string;
   product_info: string;
-  source: { url: string; title: string; description: string; candidates: string[] } | null;
+  source: { url: string; title: string; description: string; candidates: string[]; product_id: string } | null;
+  post: { mode: PostMode | null; scheduled_for: string | null; submitted_at: string | null; done_at: string | null };
   telegram: { chat_id: number; message_id: number | null; preview_sent: boolean; file_sent: boolean } | null;
   feedback: string;
   cutout_model_index: number;
@@ -48,11 +50,12 @@ export interface FlowStatus {
 
 export const STEPS = [
   "fetch_source", "cutout", "upscale", "prompt", "flow_generate", "flow_download", "enhance", "export", "hashtags",
-  "send_telegram", "tiktok_draft",
+  "send_telegram", "tiktok_draft", "tiktok_post",
 ];
-/** Only link jobs read TikTok, and only Telegram jobs send the result back. */
+/** Only link jobs read TikTok, only Telegram jobs send the result back, and posting shows once asked for. */
 export const stepsFor = (job: Job) =>
-  STEPS.filter((s) => (s !== "fetch_source" || job.source) && (s !== "send_telegram" || job.telegram));
+  STEPS.filter((s) => (s !== "fetch_source" || job.source) && (s !== "send_telegram" || job.telegram)
+    && (s !== "tiktok_post" || job.post.mode));
 export const STEP_LABELS: Record<string, string> = {
   fetch_source: "Đọc TikTok",
   cutout: "Tách nền",
@@ -65,6 +68,7 @@ export const STEP_LABELS: Record<string, string> = {
   hashtags: "Hashtag",
   send_telegram: "Gửi Telegram",
   tiktok_draft: "Lưu nháp TikTok",
+  tiktok_post: "Đăng TikTok",
 };
 export const STATUS_LABELS: Record<JobStatus, string> = {
   queued: "Chờ lượt",
@@ -140,6 +144,7 @@ export const api = {
     return post<Job>(`/api/jobs/${id}/manual-video`, form);
   },
   cancel: (id: string) => post<Job>(`/api/jobs/${id}/cancel`),
+  postOnTikTok: (id: string, mode: PostMode) => post<Job>(`/api/jobs/${id}/post`, { mode }),
   flowStatus: () => request<FlowStatus>("/api/flow/status"),
   launchChrome: () => post<{ launched: boolean; message: string }>("/api/flow/launch-chrome"),
   openExportDir: () => post<{ ok: boolean }>("/api/open-export-dir"),
@@ -158,3 +163,19 @@ export function thumbUrl(job: Job): string | null {
 }
 
 export const displayName = (job: Job) => job.source?.title || job.name;
+
+const WEEKDAYS = ["Chủ nhật", "thứ Hai", "thứ Ba", "thứ Tư", "thứ Năm", "thứ Sáu", "thứ Bảy"];
+const pad = (n: number) => String(n).padStart(2, "0");
+
+/** "✅ Đã đăng TikTok lúc 10:32" / "🗓 Đã lên lịch TikTok: 19:00 Chủ nhật 18/10"; null until TikTok has the post. */
+export function postResult(job: Job): string | null {
+  const { mode, scheduled_for, done_at } = job.post;
+  if (!done_at) return null;
+  if (mode === "schedule" && scheduled_for) {
+    const d = new Date(scheduled_for); // no offset in the string: read as local time, like the backend wrote it
+    return `🗓 Đã lên lịch TikTok: ${pad(d.getHours())}:${pad(d.getMinutes())} ${WEEKDAYS[d.getDay()]} `
+      + `${pad(d.getDate())}/${pad(d.getMonth() + 1)}`;
+  }
+  const d = new Date(done_at);
+  return `✅ Đã đăng TikTok lúc ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}

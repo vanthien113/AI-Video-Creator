@@ -1,4 +1,4 @@
-import { api, displayName, fileUrl, GATE_LABELS, STATUS_LABELS, STEP_LABELS, type Job } from "../api-client";
+import { api, displayName, fileUrl, GATE_LABELS, postResult, STATUS_LABELS, STEP_LABELS, type Job } from "../api-client";
 import PickImagePanel from "./pick-image-panel";
 import { FilePickButton, ReviewCutoutPanel, ReviewFlowVideoPanel, ReviewPromptPanel } from "./review-panels";
 import StepProgressBar from "./step-progress-bar";
@@ -13,6 +13,8 @@ function ErrorPanel({ job, onChange }: Props) {
   const isFlow = FLOW_STEPS.includes(err.step);
   const retry = () => {
     if (err.step === "flow_generate" && !window.confirm("Thử lại bước sinh video sẽ gửi lại lên Flow và tốn credit. Tiếp tục?")) return;
+    if (err.step === "tiktok_post" && job.post.submitted_at
+      && !window.confirm("Tool đã bấm Post/Schedule trước đó. Kiểm tra TikTok Studio trước: thử lại có thể đăng video 2 lần. Tiếp tục?")) return;
     run(() => api.retry(job.id, err.step));
   };
   return (
@@ -43,14 +45,27 @@ function ErrorPanel({ job, onChange }: Props) {
   );
 }
 
-function DonePanel({ job }: { job: Job }) {
+function DonePanel({ job, onChange }: Props) {
+  const { busy, error, run } = useJobAction(onChange);
+  const result = postResult(job);
+  const canPost = Boolean(job.source) && !job.post.mode;
   return (
     <div className="review">
       <video className="video" src={fileUrl(job, "final-4k60.mp4")} controls loop playsInline />
       <p className="muted">Đã xuất: <code>{job.export_path}</code></p>
+      {result && <p className="post-result">{result}</p>}
       <div className="actions">
-        <button className="btn btn-primary" onClick={() => api.openExportDir()}>Mở thư mục xuất</button>
+        {canPost && (
+          <>
+            <button className="btn btn-primary" disabled={busy}
+              onClick={() => run(() => api.postOnTikTok(job.id, "now"))}>📤 Đăng ngay</button>
+            <button className="btn" disabled={busy}
+              onClick={() => run(() => api.postOnTikTok(job.id, "schedule"))}>🗓 Lên lịch</button>
+          </>
+        )}
+        <button className={canPost ? "btn" : "btn btn-primary"} onClick={() => api.openExportDir()}>Mở thư mục xuất</button>
       </div>
+      {error && <div className="error-text">{error}</div>}
     </div>
   );
 }
@@ -84,7 +99,7 @@ export default function JobDetailPanel({ job, onChange }: Props) {
   else if (job.status === "awaiting_review" && job.gate === "prompt") body = <ReviewPromptPanel job={job} onChange={onChange} />;
   else if (job.status === "awaiting_review" && job.gate === "flow_video") body = <ReviewFlowVideoPanel job={job} onChange={onChange} />;
   else if (job.status === "failed" && job.error) body = <ErrorPanel job={job} onChange={onChange} />;
-  else if (job.status === "done") body = <DonePanel job={job} />;
+  else if (job.status === "done") body = <DonePanel job={job} onChange={onChange} />;
   else if (job.status === "cancelled") body = <p className="muted">Job đã huỷ.</p>;
   else body = <ProgressPanel job={job} />;
 
