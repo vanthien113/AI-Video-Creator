@@ -58,9 +58,20 @@ hashtag_topics: {css: "[role=option] .hash-tag-topic"}
 hashtag_selected: {css: "[role=option][aria-selected=true] .hash-tag-topic"}
 hashtag_done: {css: "[data-testid=mentionText]"}
 
-# Hộp TikTok có thể hỏi lại SAU KHI tool đã bấm Post/Schedule. Chưa khảo sát được (phải đăng thật):
-# tên nút là phỏng đoán; tool chỉ bấm chúng sau cú bấm Post/Schedule của chính nó.
+# Hộp thoại của TikTok (dùng để tìm nút xác nhận và đóng hộp thoại)
+any_dialog: {role: dialog}
+# Ô ngày/giờ chỉ đọc trong schedule_container; các mục giờ/phút là span trong schedule_container
+schedule_inputs: {css: "input[type=text]"}
+time_options: {css: "span"}
+# Tên tháng trên lịch của TikTok (tiếng Anh)
+calendar_months: [January, February, March, April, May, June, July, August, September, October, November, December]
+
+# Hộp thoại TikTok có thể hỏi lại SAU KHI tool đã bấm Post/Schedule. Chưa khảo sát được (phải đăng thật):
+# tên nút là phỏng đoán. Tool chỉ bấm nút nằm trong hộp thoại, sau cú bấm Post/Schedule của chính nó,
+# và chỉ dùng danh sách của chế độ hiện tại.
 confirm_post_buttons:
-  - {role: button, name: "Post now", exact: true}
-  - {role: button, name: "Post anyway", exact: true}
-  - {role: button, name: "Schedule anyway", exact: true}
+  now:
+    - {role: button, name: "Post now", exact: true}
+    - {role: button, name: "Post anyway", exact: true}
+  schedule:
+    - {role: button, name: "Schedule anyway", exact: true}

@@ -27,8 +27,6 @@ from .post_plan import slot_label
 from .studio_upload import (MAX_DESCRIPTION, StudioError, ai_label_on, fill_description, has_description,
                             load_selectors, open_upload_form, turn_on_ai_label, upload_video, wait_until)
 
-MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October",
-          "November", "December"]
 DATE_VALUE, TIME_VALUE = re.compile(r"^\d{4}-\d{2}-\d{2}$"), re.compile(r"^\d{2}:\d{2}$")
 PRODUCT_NAME_MAX = 30
 
@@ -127,7 +125,7 @@ def post_video(page, cfg: TikTokConfig, plan: PostPlan, report: Callable[[float,
     before_click()
     report(0.9, f"Bấm {label}")
     button.click()
-    wait_submitted(page, sel, log)
+    wait_submitted(page, sel, log, schedule)
 
 
 def add_hashtags(page, sel: FlowSelectors, tags: list[str], log: Callable[[str], None]) -> int:
@@ -176,6 +174,7 @@ def add_product_link(page, sel: FlowSelectors, texts: dict[str, re.Pattern], pro
     name_box = sel.locate(products, "product_name_input").first
     name_box.wait_for(state="visible", timeout=10000)
     for _ in range(3):
+        added = name_box.input_value()
         sel.locate(products, "dialog_add").first.click(timeout=10000)
         if wait_until(page, lambda: sel.locate(page, "product_dialog").count() == 0, 5):
             break
@@ -189,16 +188,14 @@ def add_product_link(page, sel: FlowSelectors, texts: dict[str, re.Pattern], pro
     else:
         raise StudioError("Không gắn được link sản phẩm: TikTok vẫn từ chối tên sản phẩm.")
 
-    shown = [line.strip() for line in sel.locate(page, "anchor_container").first.inner_text().splitlines()]
-    names = [line for line in shown if line and line not in ("Add link", "Add")]
-    if not names:
+    if added not in sel.locate(page, "anchor_container").first.inner_text():
         raise StudioError("Đã bấm Add nhưng form chưa hiện link sản phẩm.")
-    return names[0]
+    return added
 
 
 def close_dialogs(page, sel: FlowSelectors) -> None:
     for _ in range(3):
-        dialogs = page.get_by_role("dialog")
+        dialogs = sel.locate(page, "any_dialog")
         if not dialogs.count():
             return
         cancel = sel.locate(dialogs.last, "dialog_cancel")
@@ -218,18 +215,18 @@ def choose_schedule(page, sel: FlowSelectors, when: datetime) -> None:
     """Date first (a time can depend on the day), then hour and minute; then read both inputs back."""
     choose_when(page, sel, "schedule")
     box = sel.locate(page, "schedule_container").first
-    if not wait_until(page, lambda: _picker(box, DATE_VALUE) is not None and _picker(box, TIME_VALUE) is not None, 10):
+    if not wait_until(page, lambda: _picker(sel, box, DATE_VALUE) is not None and _picker(sel, box, TIME_VALUE) is not None, 10):
         raise StudioError("Không thấy ô chọn ngày giờ sau khi chọn Schedule.")
     _pick_date(page, sel, box, when)
-    _pick_time(page, box, when)
-    shown = (_picker(box, DATE_VALUE).input_value(), _picker(box, TIME_VALUE).input_value())
+    _pick_time(page, sel, box, when)
+    shown = (_picker(sel, box, DATE_VALUE).input_value(), _picker(sel, box, TIME_VALUE).input_value())
     if shown != (f"{when:%Y-%m-%d}", f"{when:%H:%M}"):
         raise StudioError(f"TikTok đang hiện lịch {shown[1]} {shown[0]}, không phải {when:%H:%M %Y-%m-%d}; "
                           "tool dừng trước khi bấm Schedule.")
 
 
-def _picker(box, pattern: re.Pattern):
-    fields = box.locator("input[type=text]")
+def _picker(sel: FlowSelectors, box, pattern: re.Pattern):
+    fields = sel.locate(box, "schedule_inputs")
     for i in range(fields.count()):
         if pattern.match(fields.nth(i).input_value() or ""):
             return fields.nth(i)
@@ -237,12 +234,16 @@ def _picker(box, pattern: re.Pattern):
 
 
 def _pick_date(page, sel: FlowSelectors, box, when: datetime) -> None:
-    _picker(box, DATE_VALUE).click()
+    _picker(sel, box, DATE_VALUE).click()
     calendar = sel.locate(box, "calendar").first
     calendar.wait_for(state="visible", timeout=5000)
     target = when.year * 12 + when.month - 1
     for _ in range(3):
-        month = MONTHS.index(sel.locate(calendar, "calendar_month").first.inner_text().strip())
+        title = sel.locate(calendar, "calendar_month").first.inner_text().strip()
+        months = sel.data["calendar_months"]
+        if title not in months:
+            raise StudioError(f"Lịch của TikTok hiện tháng '{title}', tool không đọc được.")
+        month = months.index(title)
         shown = int(sel.locate(calendar, "calendar_year").first.inner_text().strip()) * 12 + month
         if shown == target:
             break
@@ -257,11 +258,11 @@ def _pick_date(page, sel: FlowSelectors, box, when: datetime) -> None:
         page.keyboard.press("Escape")
 
 
-def _pick_time(page, box, when: datetime) -> None:
+def _pick_time(page, sel: FlowSelectors, box, when: datetime) -> None:
     """The hour column comes first in the DOM and the minute column last, so "15" (both) is told apart by order."""
-    _picker(box, TIME_VALUE).click()
+    _picker(sel, box, TIME_VALUE).click()
     page.wait_for_timeout(500)
-    visible = box.locator("span").filter(visible=True)
+    visible = sel.locate(box, "time_options").filter(visible=True)
     visible.filter(has_text=re.compile(rf"^{when.hour:02d}$")).first.click()
     page.wait_for_timeout(400)
     visible.filter(has_text=re.compile(rf"^{when.minute:02d}$")).last.click()
@@ -289,17 +290,21 @@ def check_ready(page, sel: FlowSelectors, texts: dict[str, re.Pattern], cfg: Tik
     return button
 
 
-def wait_submitted(page, sel: FlowSelectors, log: Callable[[str], None], timeout: float = 90) -> None:
-    """After the click: answer a "post anyway?" kind of dialog, wait for the form to go away. Not seeing that is
-    not an error here; the Content page check that follows decides."""
+def wait_submitted(page, sel: FlowSelectors, log: Callable[[str], None], schedule: bool,
+                   timeout: float = 90) -> None:
+    """After the click: leave at once when the form is gone; otherwise answer a confirm dialog of this mode.
+    Not seeing the form leave is not an error here; the Content page check that follows decides."""
+    mode = "schedule" if schedule else "now"
     deadline = time.time() + timeout
     while time.time() < deadline:
         page.wait_for_timeout(1500)
-        for spec in sel.data.get("confirm_post_buttons", []):
-            button = build_locator(page, spec)
+        if "/upload" not in page.url:
+            return
+        dialogs = sel.locate(page, "any_dialog")
+        for spec in sel.data.get("confirm_post_buttons", {}).get(mode, []):
+            button = build_locator(dialogs, spec)
             if button.count() and button.first.is_visible():
                 log(f"tiktok_post: TikTok hỏi lại, bấm '{spec.get('name')}'")
                 button.first.click(timeout=5000)
-        if "/upload" not in page.url:
-            return
+                break
     log("tiktok_post: sau khi bấm, trang tải lên vẫn còn; kiểm tra trên trang Content")
