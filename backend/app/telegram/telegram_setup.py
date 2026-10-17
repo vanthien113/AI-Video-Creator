@@ -6,8 +6,17 @@ from ..link_job_actions import LinkJobActions
 from .telegram_api import TelegramApi
 from .telegram_listener import TelegramListener
 from .telegram_pick import PickHandler
+from .telegram_post import PostHandler
 
 OFFSET_FILE = ".telegram-offset"
+
+
+def route_taps(pick, post):
+    """Photo picker buttons carry "p:"/"g:", the post buttons "t:"."""
+    def handle(callback: dict) -> str | None:
+        return (post if (callback.get("data") or "").startswith("t:") else pick).handle(callback)
+
+    return handle
 
 
 def start_telegram(config: AppConfig, actions: LinkJobActions) -> TelegramListener | None:
@@ -20,7 +29,7 @@ def start_telegram(config: AppConfig, actions: LinkJobActions) -> TelegramListen
         on_link=lambda url, chat_id, message_id: actions.create_from_link(
             url, TelegramOrigin(chat_id=chat_id, message_id=message_id)) is not None,
         offset_file=config.paths.jobs_dir / OFFSET_FILE,
-        on_callback=PickHandler(actions, api, config).handle,
+        on_callback=route_taps(PickHandler(actions, api, config), PostHandler(actions, api)),
     )
     listener.start()
     return listener

@@ -3,16 +3,18 @@ status message per job that is edited as the job moves between steps."""
 
 import threading
 from collections.abc import Callable
+from datetime import datetime
 from pathlib import Path
 
 from ..config import AppConfig, TelegramConfig
 from ..job_models import PICK_GATE, JobState, JobStatus, TelegramMessageRef
+from ..tiktok.post_plan import slot_label
 from .telegram_api import TelegramApi, TelegramApiError
 
 STEP_NAMES = {
     "fetch_source": "Đọc TikTok", "cutout": "Tách nền", "upscale": "Upscale", "prompt": "Prompt",
     "flow_generate": "Flow sinh", "flow_download": "Tải video", "enhance": "Nâng 60fps", "export": "Xuất file", "hashtags": "Hashtag",
-    "send_telegram": "Gửi Telegram", "tiktok_draft": "Lưu nháp TikTok",
+    "send_telegram": "Gửi Telegram", "tiktok_draft": "Lưu nháp TikTok", "tiktok_post": "Đăng TikTok",
 }
 
 
@@ -68,16 +70,29 @@ def failure_notifier(config: AppConfig, job_dir: Callable[[str], Path]) -> Calla
 def status_text(job: JobState) -> str:
     title = (job.source.title if job.source else "") or job.name
     if job.status == JobStatus.done:
-        line = "✅ Xong"
+        line = _posted(job) or "✅ Xong"
     elif job.status == JobStatus.failed:
         line = f"❌ Lỗi ở bước {STEP_NAMES.get(job.error.step, job.error.step) if job.error else ''}".rstrip()
     elif job.status == JobStatus.cancelled:
         line = "⏹ Đã huỷ"
     elif job.status == JobStatus.awaiting_review:
         line = "🖼 Chờ chọn ảnh" if job.gate == PICK_GATE else f"⏸ Chờ duyệt: {GATE_NAMES.get(job.gate, job.gate)}"
+    elif job.current_step == "tiktok_post" and not job.post.mode:
+        line = "✅ Xong"  # nobody pressed a post button: the step has nothing to do
+    elif job.current_step == "tiktok_post" and job.post.mode == "schedule":
+        line = "⏳ Đang: Lên lịch TikTok"
     else:
         line = f"⏳ Đang: {STEP_NAMES.get(job.current_step, job.current_step)}"
     return f"🎬 {title}\n{line}"
+
+
+def _posted(job: JobState) -> str:
+    post = job.post
+    if not post.done_at:
+        return ""
+    if post.mode == "schedule" and post.scheduled_for:
+        return f"🗓 Đã lên lịch TikTok {slot_label(datetime.fromisoformat(post.scheduled_for), weekday=False)}"
+    return "✅ Đã đăng TikTok"
 
 
 class StatusNotifier:

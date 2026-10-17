@@ -26,9 +26,12 @@ class TelegramApi:
         response.raise_for_status()
         return response.json().get("result", [])
 
-    def send_message(self, chat_id: int, text: str, reply_to: int | None = None) -> int | None:
-        body = self._call("sendMessage", {"chat_id": chat_id, "text": text, "disable_web_page_preview": True,
-                                          **self._reply(reply_to)}, as_json=True)
+    def send_message(self, chat_id: int, text: str, reply_to: int | None = None,
+                     reply_markup: dict | None = None) -> int | None:
+        data = {"chat_id": chat_id, "text": text, "disable_web_page_preview": True, **self._reply(reply_to)}
+        if reply_markup:
+            data["reply_markup"] = reply_markup
+        body = self._call("sendMessage", data, as_json=True)
         return (body.get("result") or {}).get("message_id")
 
     def edit_text(self, chat_id: int, message_id: int, text: str) -> None:
