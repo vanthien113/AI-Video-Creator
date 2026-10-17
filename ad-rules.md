@@ -4,7 +4,7 @@ File này được gửi nguyên văn cho Claude mỗi lần viết prompt. Sử
 Các quy tắc bám theo hướng dẫn nội dung của TikTok Shop: có người dùng sản phẩm, nhiều góc quay, có lời nói, không cảnh tĩnh.
 
 ## Ngôn ngữ và độ dài
-- Viết prompt bằng **tiếng Anh** (Veo hiểu tiếng Anh tốt nhất). Riêng lời nói của người trong video viết bằng **tiếng Việt**, đặt trong ngoặc kép.
+- Viết prompt bằng **tiếng Anh** (Veo hiểu tiếng Anh tốt nhất). Riêng lời nói của người trong video viết bằng **tiếng Việt** có dấu, đặt trong ngoặc kép.
 - 90–160 từ, một đoạn liền, không gạch đầu dòng.
 
 ## Câu hook (bắt buộc)
@@ -25,7 +25,7 @@ Các quy tắc bám theo hướng dẫn nội dung của TikTok Shop: có ngư�
 - 2–3 cảnh nối nhau bằng cắt cảnh gọn, mỗi cảnh một góc máy và cỡ cảnh khác nhau.
 - Luôn có chuyển động (người, sản phẩm hoặc máy quay). Không có cảnh đứng yên, không lặp lại.
 - Bối cảnh đời thường, sạch đẹp, hợp với sản phẩm.
-- Không cho người mẫu xoay người 360 độ
+- Không cho người mẫu xoay người hay đảo chân
 
 ## Âm thanh
 - Lời nói tiếng Việt rõ ràng, giọng tự nhiên, thân thiện. Nhạc nền nhẹ, nhỏ hơn giọng nói.
