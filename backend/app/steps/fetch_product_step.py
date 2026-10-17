@@ -10,6 +10,7 @@ from ..mac_notification import notify
 from ..sources.product_page_reader import SourceError, download_images, read_product_page
 from ..telegram.telegram_api import TelegramApi, TelegramApiError
 from ..telegram.telegram_pick import send_picker
+from ..tiktok.post_plan import product_id_from_url
 from .step_types import JobContext, StepFailure
 
 MAX_PRODUCT_INFO = 1500  # title + the real description (sizes, material, features)
@@ -57,6 +58,7 @@ def run_fetch_product(ctx: JobContext) -> None:
 
     def save(j: JobState) -> None:
         j.source.title, j.source.description, j.source.candidates = product.title, product.description, names
+        j.source.product_id = product_id_from_url(product.url) or product_id_from_url(j.source.url)
         j.product_info = "\n".join(p for p in (product.title, product.description) if p)[:MAX_PRODUCT_INFO]
         if product.title:
             j.name = slugify(product.title)

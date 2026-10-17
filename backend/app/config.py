@@ -120,8 +120,19 @@ class TelegramConfig(BaseModel):
 class TikTokConfig(BaseModel):
     save_draft: bool = True  # after export: upload to TikTok Studio and Save draft (never Post)
     upload_url: str = "https://www.tiktok.com/tiktokstudio/upload?from=webapp&tab=video"
+    post_url: str = "https://www.tiktok.com/tiktokstudio/upload?from=creator_center&tab=video"
+    content_url: str = "https://www.tiktok.com/tiktokstudio/content"
+    schedule_slots: list[int] = Field(default_factory=lambda: [7, 9, 11, 13, 15, 17, 19, 21, 23], min_length=1)
+    schedule_lead_min: int = Field(20, ge=15)  # TikTok Studio only offers times about 15 minutes ahead or later
     ai_generated_label: bool = True  # TikTok may take down realistic AI video that is not labelled
     timeout_sec: int = Field(600, ge=60)  # upload + processing of the exported file
+
+    @field_validator("schedule_slots")
+    @classmethod
+    def _hours(cls, value: list[int]) -> list[int]:
+        if any(not 0 <= hour <= 23 for hour in value):
+            raise ValueError("schedule_slots: giờ phải từ 0 đến 23")
+        return sorted(set(value))
 
 
 class AppConfig(BaseModel):

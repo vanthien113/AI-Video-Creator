@@ -2,6 +2,7 @@
 
 from datetime import datetime
 from enum import Enum
+from typing import Literal
 
 from pydantic import BaseModel, Field
 
@@ -9,8 +10,10 @@ from pydantic import BaseModel, Field
 # "send_telegram" only does work for jobs that came from Telegram; for the others it is a no-op.
 # "tiktok_draft" saves the video as a TikTok Studio draft (never posts) when tiktok.save_draft is on.
 # "hashtags" asks Google's AI Mode (Claude as fallback) for 3 hashtags; it never fails the job.
+# "tiktok_post" posts or schedules the video on TikTok, only after the user pressed Đăng ngay / Lên lịch;
+# until then it only sends those two buttons to Telegram.
 STEPS = ["fetch_source", "cutout", "upscale", "prompt", "flow_generate", "flow_download", "enhance", "export",
-         "hashtags", "send_telegram", "tiktok_draft"]
+         "hashtags", "send_telegram", "tiktok_draft", "tiktok_post"]
 FIRST_UPLOAD_STEP = "cutout"
 
 # A gate pauses the job right after the step it is keyed by.
@@ -46,6 +49,7 @@ class SourceInfo(BaseModel):
     title: str = ""
     description: str = ""
     candidates: list[str] = Field(default_factory=list)  # file names in <job>/candidates/
+    product_id: str = ""  # from the page address after redirects; short vt.tiktok.com links carry none
 
 
 class TelegramOrigin(BaseModel):
@@ -70,6 +74,20 @@ class TelegramMessageRef(BaseModel):
 class TikTokDraftState(BaseModel):
     saved_at: str | None = None  # draft saved: a retry only re-sends the Telegram note
     notified: bool = False
+
+
+class TikTokPostState(BaseModel):
+    """Đăng ngay / Lên lịch, started by a button in the tool or on Telegram. submitted_at is saved right before
+    Post/Schedule is clicked and done_at once the post shows on TikTok Studio, so the tool never clicks twice."""
+
+    mode: Literal["now", "schedule"] | None = None  # None = nobody asked: the step only offers the buttons
+    requested_at: str | None = None
+    scheduled_for: str | None = None  # local time, e.g. "2026-10-18T19:00:00"
+    submitted_at: str | None = None
+    done_at: str | None = None
+    notified: bool = False  # result message sent on Telegram
+    offer_token: str | None = None  # carried in the Telegram button data
+    offer_message: TelegramMessageRef | None = None  # the message with the two buttons
 
 
 class JobError(BaseModel):
@@ -104,6 +122,7 @@ class JobState(BaseModel):
     hashtags_verified: bool = False  # each one checked on TikTok (exists, enough videos)
     status_message: TelegramMessageRef | None = None  # the one Telegram message edited as the job moves on
     tiktok: TikTokDraftState = Field(default_factory=TikTokDraftState)
+    post: TikTokPostState = Field(default_factory=TikTokPostState)
     feedback: str = ""
     cutout_model_index: int = 0
     progress: float = 0
