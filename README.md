@@ -28,6 +28,7 @@ Telegram / giao diện ─▶ Đọc TikTok ─▶ Chọn ảnh ─▶ Tách n�
 10. **Tìm hashtag:** hỏi Chế độ AI của Google 10 hashtag ứng viên theo loại sản phẩm, kiểm tra từng cái trên TikTok (có tồn tại, ít nhất 1.000 video) và giữ 3 cái đầu tiên đạt (khoảng 15–25 giây; Google lỗi thì Claude đưa ứng viên; không làm hỏng job).
 11. **Trả về Telegram**, ngay dưới tin gửi link: video 1080p xem nhanh, file 2K gốc, rồi một tin chỉ có tên sản phẩm và 3 hashtag để copy.
 12. *(Tuỳ chọn, đang tắt)* **Lưu nháp TikTok Studio:** tải video lên, mô tả là tên sản phẩm, bật nhãn "AI-generated content", bấm **Save draft**. Không bao giờ bấm Post.
+13. **Đăng TikTok (khi bạn bấm):** job tạo từ link có 2 nút **📤 Đăng ngay** và **🗓 Lên lịch**, trên tool và trong một tin Telegram riêng ngay sau tên + hashtag. Tool tải video lên TikTok Studio, điền tên + hashtag (chọn trong gợi ý của TikTok để thành hashtag thật), gắn link sản phẩm theo ID, bật nhãn AI, chọn Now hoặc khung giờ trống kế tiếp, bấm Post/Schedule, rồi kiểm tra bài trên trang Content.
 
 Job từ link Telegram chạy thẳng không dừng sau khi chọn ảnh. Job tạo trên giao diện dừng ở 3 điểm duyệt, mỗi điểm có ô "tự động chạy tiếp".
 
@@ -90,6 +91,24 @@ cd backend && ../.venv/bin/python -m app.sources.check_product_page "<link TikTo
 
 **Mạng chặn TikTok** (ví dụ tường lửa công ty): bước "Đọc TikTok" sẽ báo "Mạng hiện tại đang chặn TikTok". Khi đó bấm **"Dùng ảnh của tôi"** để tự tải ảnh lên, các bước sau vẫn chạy bình thường.
 
+## Đăng TikTok (ngay hoặc lên lịch)
+
+Cần: Chrome của tool đã đăng nhập TikTok bằng tài khoản bán hàng, và sản phẩm có trong showcase/shop của tài khoản đó (tool gắn link bằng ID sản phẩm lấy từ link TikTok Shop).
+
+- Bấm **📤 Đăng ngay** hoặc **🗓 Lên lịch** ở khung "Xong" của job, hoặc trên tin "📤 Đăng video này lên TikTok?" của bot. Bấm là chạy, không hỏi lại. Mỗi video chỉ đăng một lần (làm lại video từ bước Xuất file thì đăng lại được).
+- **Lên lịch** đọc trang Content của TikTok Studio, lấy giờ của bài muộn nhất (tính cả bài đã lên lịch), rồi chọn khung kế tiếp trong `tiktok.schedule_slots` (mặc định 7, 9, 11, …, 23h), cách bây giờ ít nhất `tiktok.schedule_lead_min` phút; hết khung trong ngày thì sang 7h hôm sau. TikTok chỉ cho lên lịch trước tối đa 30 ngày.
+- Xong thì tool hiện "✅ Đã đăng TikTok lúc 10:32" hoặc "🗓 Đã lên lịch TikTok: 19:00 Chủ nhật 18/10". Trên Telegram, tin "Đang" và tin có 2 nút được sửa thành kết quả, kèm một tin mới báo đã đăng (có giờ nếu lên lịch).
+- Không tìm thấy sản phẩm khi Add link: tool dừng, không đăng. Thêm sản phẩm vào showcase rồi bấm **Thử lại**.
+- Tool chỉ coi là đã đăng khi thấy bài trên trang Content. Đã bấm Post/Schedule mà không thấy bài thì job báo lỗi và tool **không tự bấm lại**: vào TikTok Studio kiểm tra, chưa có bài thì bấm **Thử lại** (tool hỏi lại vì có thể đăng 2 lần).
+
+Chạy thử mọi thao tác trừ cú bấm cuối (video được tải vào form nhưng không đăng; xem xong thì đóng tab đó). Chạy lúc tool không có job nào đang chạy:
+
+```bash
+cd backend && ../.venv/bin/python -m app.tiktok.check_post <job-id> [--schedule]
+```
+
+Sau khi cập nhật code: chạy `cd frontend && npm run build` rồi khởi động lại tool (`./scripts/start.sh` chỉ tự build giao diện khi chưa có `frontend/dist`).
+
 ## Lưu nháp TikTok (tuỳ chọn)
 
 Đang tắt. Bật bằng `tiktok.save_draft: true` trong `config.yaml`, rồi đăng nhập TikTok trong cửa sổ Chrome của tool bằng tài khoản dùng để đăng video.
@@ -103,7 +122,7 @@ cd backend && ../.venv/bin/python -m app.sources.check_product_page "<link TikTo
 
 | File | Dùng để |
 |---|---|
-| `config.yaml` | Thư mục xuất, mô hình Flow, tỉ lệ khung hình, độ phân giải và thời lượng, số video mỗi lượt, số ảnh tối đa, mức credit tối đa, chất lượng tải, fps/độ phân giải xuất, mặc định các ô tự động, Telegram, lưu nháp TikTok |
+| `config.yaml` | Thư mục xuất, mô hình Flow, tỉ lệ khung hình, độ phân giải và thời lượng, số video mỗi lượt, số ảnh tối đa, mức credit tối đa, chất lượng tải, fps/độ phân giải xuất, mặc định các ô tự động, Telegram, lưu nháp TikTok, khung giờ đăng TikTok |
 | `.env` | Token bot và ID Telegram được phép (bí mật, không đưa lên git; mẫu ở `.env.example`) |
 | `ad-rules.md` | Quy tắc viết prompt quảng cáo (gửi nguyên văn cho Claude) |
 | `assets/logo.png` | Logo của bạn đè lên dấu ✦ của Flow (PNG nền trong suốt; thay bằng logo của bạn nếu dùng repo này). Vị trí và cỡ nằm trong mục `logo` của `config.yaml`, đo sẵn cho video 9:16; không có logo thì đặt `logo.enabled: false` |
