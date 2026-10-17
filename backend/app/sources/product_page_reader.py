@@ -17,6 +17,12 @@ COLLECT_JS = """() => ({
   title: (document.querySelector('meta[property="og:title"]') || {}).content || document.title || '',
   description: (document.querySelector('meta[property="og:description"]')
                 || document.querySelector('meta[name="description"]') || {}).content || '',
+  // The real description: the smallest block that starts with its heading (the meta tag above is only
+  // an SEO sentence repeating the title).
+  descriptionBlock: [...document.querySelectorAll('div,section')]
+    .map(e => (e.innerText || '').trim())
+    .filter(t => /^(Product description|Mô tả sản phẩm)/i.test(t) && t.length > 40 && t.length < 8000)
+    .sort((a, b) => a.length - b.length)[0] || '',
   ogImages: [...document.querySelectorAll('meta[property="og:image"]')].map(m => m.content).filter(Boolean),
   images: [...document.images].map(i => ({src: i.currentSrc || i.src, w: i.naturalWidth, h: i.naturalHeight})),
   text: document.body ? document.body.innerText.slice(0, 3000) : ''
@@ -107,6 +113,36 @@ def clean_title(title: str) -> str:
     return TITLE_SUFFIX.sub("", title.strip())
 
 
+DESCRIPTION_HEADING = re.compile(r"^(product description|mô tả sản phẩm)\s*$", re.I)
+DESCRIPTION_NOISE = {"·", "•", "-", "view more", "xem thêm", "see more"}
+
+
+def _words(text: str) -> set[str]:
+    return set(re.findall(r"\w+", text.lower()))
+
+
+def clean_description(block: str, title: str) -> str:
+    """The text under "Product description" without the heading, bullets, "View more", and the title line
+    (shops repeat the title there, sometimes for another variant: compared by shared words)."""
+    lines = [line.strip() for line in block.splitlines()]
+    lines = [line for line in lines if line and line.lower() not in DESCRIPTION_NOISE
+             and not DESCRIPTION_HEADING.match(line)]
+    title_words = _words(title)
+    if lines and title_words and len(_words(lines[0]) & title_words) >= 0.6 * len(title_words):
+        lines = lines[1:]
+    return "\n".join(lines)
+
+
+SEO_SENTENCE = re.compile(r"^Buy .+ on TikTok Shop\b", re.I | re.S)
+
+
+def pick_description(block: str, meta: str, title: str) -> str:
+    """The real description; else the meta description unless it is TikTok's "Buy … on TikTok Shop" line,
+    which only repeats the title (with a wrong category at times). Image-only descriptions give ""."""
+    meta = meta.strip()
+    return clean_description(block, title) or ("" if SEO_SENTENCE.match(meta) else meta)
+
+
 def read_product_page(page, url: str, timeout_ms: int = 60000) -> ProductPage:
     from playwright.sync_api import Error as PlaywrightError
 
@@ -134,8 +170,9 @@ def read_product_page(page, url: str, timeout_ms: int = 60000) -> ProductPage:
         if reason:
             raise SourceError(reason)
         raise SourceError("Không thấy ảnh sản phẩm trên trang. Link có đúng là trang sản phẩm TikTok Shop không?")
-    return ProductPage(url=data["url"], title=clean_title(data["title"]), description=data["description"].strip(),
-                       image_urls=urls)
+    title = clean_title(data["title"])
+    description = pick_description(data.get("descriptionBlock", ""), data["description"], title)
+    return ProductPage(url=data["url"], title=title, description=description, image_urls=urls)
 
 
 def download_images(request, urls: list[str], dest_dir: Path, min_side: int = 400,

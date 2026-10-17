@@ -12,7 +12,7 @@ from ..telegram.telegram_api import TelegramApi, TelegramApiError
 from ..telegram.telegram_pick import send_picker
 from .step_types import JobContext, StepFailure
 
-MAX_PRODUCT_INFO = 800
+MAX_PRODUCT_INFO = 1500  # title + the real description (sizes, material, features)
 
 
 def make_api(token: str) -> TelegramApi:  # replaced in tests

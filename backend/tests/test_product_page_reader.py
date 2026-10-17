@@ -97,3 +97,42 @@ def test_fetch_step_on_local_fixture_with_real_chrome(make_context, fixture_site
     assert saved.name == "kem-chong-nang-xyz"
     with Image.open(ctx.path("candidates/01.jpg")) as first:
         assert first.size == (900, 900)
+
+
+# The page text under "Product description", as read on 2026-10-17 (the og:description meta tag only says
+# "Buy <title> on TikTok Shop. Discover great prices on Dép lê…", which repeats the title with the wrong category).
+DESCRIPTION_BLOCK = """Product description
+[5590-CHÂN DÀY TĂNG SZ] Giày búp bê phối khuy xinh xắn đi mềm êm chân thiết kế basic
+·
+Kiến nghị chọn size: chuẩn sz
+·
+Size: full size 35/36/37/38/39
+·
+Đế: đế bệt, chất liệu cao su non đi êm chân và bền, bản đế chống trơn trượt tốt
+Nếu bạn còn thắc mắc về sản phẩm, size số hãy ib cho chúng mình để được hỗ trợ nhanh nhất.
+View more"""
+
+
+def test_real_description_replaces_the_seo_sentence():
+    from app.sources.product_page_reader import clean_description
+
+    text = clean_description(DESCRIPTION_BLOCK, "[5590-CHÂN DÀY TĂNG SZ] Giày búp bê phối khuy xinh xắn đi mềm êm chân thiết kế basic")
+    assert text.startswith("Kiến nghị chọn size: chuẩn sz\nSize: full size 35/36/37/38/39\nĐế: đế bệt")
+    assert "Product description" not in text and "View more" not in text and "·" not in text
+    assert "Giày búp bê phối khuy" not in text  # the title is sent on its own line already
+    assert clean_description("", "x") == ""
+    assert clean_description("Mô tả sản phẩm\nChất liệu: da PU\nXem thêm", "x") == "Chất liệu: da PU"
+
+
+SEO = ("Buy Dép sandal lỗ nữ mới 2026 on TikTok Shop. Discover great prices on Dép lê and get free shipping "
+       "on eligible items. Shop now for exclusive deals!")
+
+
+def test_pick_description_prefers_the_real_text_and_drops_tiktoks_seo_sentence():
+    from app.sources.product_page_reader import pick_description
+
+    title = "[5590-GẦY MẢNH LÙI SZ] Giày búp bê phối khuy xinh xắn đi mềm êm chân thiết kế basic"
+    assert pick_description(DESCRIPTION_BLOCK, SEO, title).startswith("Kiến nghị chọn size")
+    # Image-only descriptions ("Product description / View more"): no text, and the SEO line says nothing new.
+    assert pick_description("Product description\nView more", SEO, "Dép sandal lỗ nữ") == ""
+    assert pick_description("", "SPF50+ PA++++, 50ml", "Kem") == "SPF50+ PA++++, 50ml"  # a real meta description
