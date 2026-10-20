@@ -18,7 +18,7 @@ Các quy tắc bám theo hướng dẫn nội dung: có người dùng sản ph�
 - Có một người mẫu xuất hiện rõ trên màn hình và **đang dùng sản phẩm**: mang, mặc, bôi, cầm, mở hộp... tuỳ loại sản phẩm.
 - Sau câu hook, người mẫu nói thêm 1 câu ngắn tiếng Việt về 1–2 tính năng chính nhìn thấy được hoặc có trong thông tin sản phẩm.
 - Không bịa trải nghiệm cá nhân ("tôi dùng cả tháng rồi"), công dụng y tế hay thông số không có trong thông tin sản phẩm.
-- Sản phẩm luôn rõ nét, đúng như ảnh. Viết rõ: "The product must look identical to the reference images in every shot: same shape, colors, materials, logo, printed text and details; do not add, remove or change anything".
+- Sản phẩm luôn rõ nét, đúng như ảnh. Viết rõ: "keep the product's exact shape, colors, logo and printed text unchanged".
 
 ## Cảnh quay
 - Tự nghĩ kịch bản riêng cho sản phẩm này, không theo khuôn nào: bối cảnh, thứ tự cảnh, hành động của người mẫu, cách máy quay chuyển động và ánh sáng đều chọn theo đúng loại sản phẩm, phong cách và người sẽ mua nó.
@@ -26,7 +26,6 @@ Các quy tắc bám theo hướng dẫn nội dung: có người dùng sản ph�
 - Luôn có chuyển động (người, sản phẩm hoặc máy quay). Không có cảnh đứng yên, không lặp lại.
 - Bối cảnh đời thường, sạch đẹp, hợp với sản phẩm.
 - Không cho người mẫu xoay người hay đảo chân
-- Chỉ quay sản phẩm từ những góc mà ảnh có. Không có hành động làm lộ phần ảnh không có, trừ khi có ảnh cho thấy phần đó.
 
 ## Âm thanh
 - Lời nói tiếng Việt rõ ràng, giọng tự nhiên, thân thiện. Nhạc nền nhẹ, nhỏ hơn giọng nói.
