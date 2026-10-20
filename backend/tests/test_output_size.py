@@ -24,6 +24,15 @@ def test_export_name_says_2k60(make_context, make_config):
     assert ctx.job.export_path.endswith("_2k60.mp4")
 
 
+def test_no_export_dir_keeps_the_video_in_the_job_folder(make_context, make_config, tmp_path):
+    config = make_config()
+    config.paths.export_dir = None
+    ctx = make_context(config=config)
+    ctx.path("final-4k60.mp4").write_bytes(b"video")
+    run_export(ctx)
+    assert ctx.job.export_path is None and not (tmp_path / "export").exists()
+
+
 def test_export_name_without_upscale_says_the_flow_size(make_context, make_config):
     ctx = make_context(config=make_config(video=VideoConfig(upscale=False, long_edge=2560)))
     make_test_clip(ctx.path("final-4k60.mp4"), width=720, height=1280, seconds=1)

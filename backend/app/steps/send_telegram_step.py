@@ -19,13 +19,8 @@ def make_api(token: str) -> TelegramApi:  # replaced in tests
 
 
 def build_caption(job: JobState) -> str:
-    title = (job.source.title if job.source else "") or job.name
-    lines = [f"✅ Video xong: {title}"]
-    if job.source:
-        lines.append(f"🔗 {job.source.url}")
-    if job.export_path:
-        lines.append(f"📁 {Path(job.export_path).name}")
-    return "\n".join(lines)
+    """Only the product link: the title and hashtags follow in a message of their own."""
+    return job.source.url if job.source else ""
 
 
 def upload_file(ctx: JobContext, final: Path) -> Path:

@@ -1,4 +1,4 @@
-"""Step 7: copy the final video into the export folder with a readable, unique name."""
+"""Step 7: copy the final video into the export folder with a readable, unique name (none set: nothing to do)."""
 
 import shutil
 from datetime import datetime
@@ -20,6 +20,10 @@ def run_export(ctx: JobContext) -> None:
     if not src.exists():
         raise StepFailure("Thiếu final-4k60.mp4, chạy lại bước nâng cấp video.")
     folder = ctx.config.paths.export_dir
+    if folder is None:  # the job folder's own copy is the video
+        ctx.log(f"export: không chép ra ngoài, video nằm ở {src}")
+        ctx.report(1, "Xong")
+        return
     try:
         folder.mkdir(parents=True, exist_ok=True)
         video = ctx.config.video

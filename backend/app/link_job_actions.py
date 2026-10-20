@@ -93,6 +93,8 @@ class LinkJobActions(JobActions):
 
     def request_post(self, job_id: str, mode: str) -> JobState:
         """Đăng ngay / Lên lịch from the tool or Telegram: queue the tiktok_post step of a finished link job, once."""
+        if not self.config.tiktok.post_enabled:
+            raise InvalidAction("Chức năng đăng TikTok đang tạm tắt (tiktok.post_enabled trong config.yaml).")
         if mode not in POST_MODES:
             raise InvalidAction("Chế độ đăng không hợp lệ.")
 

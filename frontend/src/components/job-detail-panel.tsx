@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { api, displayName, fileUrl, GATE_LABELS, postResult, STATUS_LABELS, STEP_LABELS, type Job } from "../api-client";
 import PickImagePanel from "./pick-image-panel";
 import { FilePickButton, ReviewCutoutPanel, ReviewFlowVideoPanel, ReviewPromptPanel } from "./review-panels";
@@ -48,11 +49,15 @@ function ErrorPanel({ job, onChange }: Props) {
 function DonePanel({ job, onChange }: Props) {
   const { busy, error, run } = useJobAction(onChange);
   const result = postResult(job);
-  const canPost = Boolean(job.source) && !job.post.mode;
+  const [postEnabled, setPostEnabled] = useState(false); // off until the settings say so: no flash of buttons
+  useEffect(() => {
+    api.settings().then((s) => setPostEnabled(s.tiktok_post)).catch(() => undefined);
+  }, []);
+  const canPost = postEnabled && Boolean(job.source) && !job.post.mode;
   return (
     <div className="review">
       <video className="video" src={fileUrl(job, "final-4k60.mp4")} controls loop playsInline />
-      <p className="muted">Đã xuất: <code>{job.export_path}</code></p>
+      <p className="muted">Video: <code>jobs/{job.id}/final-4k60.mp4</code></p>
       {result && <p className="post-result">{result}</p>}
       <div className="actions">
         {canPost && (
@@ -63,7 +68,7 @@ function DonePanel({ job, onChange }: Props) {
               onClick={() => run(() => api.postOnTikTok(job.id, "schedule"))}>🗓 Lên lịch</button>
           </>
         )}
-        <button className={canPost ? "btn" : "btn btn-primary"} onClick={() => api.openExportDir()}>Mở thư mục xuất</button>
+        <button className={canPost ? "btn" : "btn btn-primary"} onClick={() => api.revealVideo(job.id)}>Mở trong Finder</button>
       </div>
       {error && <div className="error-text">{error}</div>}
     </div>

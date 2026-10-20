@@ -178,6 +178,14 @@ def test_nobody_asked_only_offers_the_buttons_once(rig):
     assert len(api.sent) == 1 and studio.posted == []
 
 
+def test_no_buttons_while_posting_is_off(rig):
+    build, studio, api, _ = rig
+    ctx = build(None, offered=False)
+    ctx.config.tiktok.post_enabled = False
+    run_tiktok_post(ctx)
+    assert api.sent == [] and studio.posted == []
+
+
 def test_offer_failure_never_fails_the_job(rig):
     build, studio, api, _ = rig
     ctx = build(None, offered=False)

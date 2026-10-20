@@ -39,7 +39,8 @@ def test_allowed_user_links_create_jobs():
 
     reply = handle_message(msg("https://vt.tiktok.com/A/ https://vt.tiktok.com/B/"), {ME}, on_link)
     assert seen == ["https://vt.tiktok.com/A/", "https://vt.tiktok.com/B/"]
-    assert "Đã nhận" in reply and "1 link đã có" in reply
+    assert reply == "1 link đã có trong hàng chờ, bỏ qua."
+    assert handle_message(msg("https://vt.tiktok.com/C/"), {ME}, lambda u: True) is None  # the status message answers
     assert "Không thấy link" in handle_message(msg("chào"), {ME}, on_link)
 
 
@@ -62,7 +63,8 @@ def test_offset_survives_restart(tmp_path):
     api = FakeApi([updates])
     links = []
     TelegramListener(api, "tok", [ME], lambda u, c, m: links.append((u, c, m)) or True, offset_file).poll_once()
-    assert links == [("https://vt.tiktok.com/A/", ME, 7)] and api.sent and offset_file.read_text() == "42"
+    assert links == [("https://vt.tiktok.com/A/", ME, 7)] and offset_file.read_text() == "42"
+    assert api.sent == []  # no "received" reply: the job's status message is the answer
 
     api2 = FakeApi([])
     TelegramListener(api2, "tok", [ME], lambda u, c, m: True, offset_file).poll_once()

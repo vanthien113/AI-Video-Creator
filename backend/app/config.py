@@ -24,7 +24,7 @@ class ServerConfig(BaseModel):
 
 
 class PathsConfig(BaseModel):
-    export_dir: Path
+    export_dir: Path | None = None  # None: the video stays in its job folder only (jobs/<id>/final-4k60.mp4)
     rules_file: Path
     jobs_dir: Path
     chrome_profile: Path
@@ -32,7 +32,7 @@ class PathsConfig(BaseModel):
     @field_validator("*", mode="before")
     @classmethod
     def _resolve(cls, value):
-        return resolve_path(value)
+        return resolve_path(value) if value else None
 
 
 class ImageConfig(BaseModel):
@@ -125,6 +125,7 @@ class TelegramConfig(BaseModel):
 
 class TikTokConfig(BaseModel):
     save_draft: bool = True  # after export: upload to TikTok Studio and Save draft (never Post)
+    post_enabled: bool = True  # False hides Đăng ngay / Lên lịch (tool and Telegram) and refuses new requests
     upload_url: str = "https://www.tiktok.com/tiktokstudio/upload?from=webapp&tab=video"
     post_url: str = "https://www.tiktok.com/tiktokstudio/upload?from=creator_center&tab=video"
     content_url: str = "https://www.tiktok.com/tiktokstudio/content"

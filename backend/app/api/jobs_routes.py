@@ -2,6 +2,7 @@
 
 import json
 import re
+import subprocess
 from typing import Literal
 
 from fastapi import APIRouter, File, Form, HTTPException, Request, UploadFile
@@ -125,6 +126,18 @@ def get_job_file(request: Request, job_id: str, name: str):
     if not path.is_file():
         raise HTTPException(404, "Chưa có file")
     return FileResponse(path, headers={"Cache-Control": "no-store"})
+
+
+@router.post("/jobs/{job_id}/reveal")
+def reveal_video(request: Request, job_id: str):
+    """Show the finished video in Finder: the one in the job folder, even when a copy was exported elsewhere."""
+    svc = services(request)
+    guarded(lambda: svc.store.get(job_id))
+    video = svc.store.job_dir(job_id) / "final-4k60.mp4"
+    if not video.is_file():
+        raise HTTPException(404, "Chưa có video")
+    subprocess.run(["open", "-R", str(video)], check=False)
+    return {"ok": True}
 
 
 class ApproveBody(BaseModel):

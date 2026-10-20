@@ -32,6 +32,5 @@ def handle_message(message: dict, allowed_ids: set[int], on_link: Callable[[str]
     skipped = len(links) - accepted
     if not accepted:
         return "Link này đang có trong hàng chờ rồi."
-    reply = "Đã nhận link ✅ Mở AI Video Creator để chọn ảnh." if accepted == 1 else \
-        f"Đã nhận {accepted} link ✅ Mở AI Video Creator để chọn ảnh."
-    return reply + (f" ({skipped} link đã có trong hàng chờ, bỏ qua.)" if skipped else "")
+    # No "received" reply: each new job's status message (⏳ Đang: Đọc TikTok) already answers under the link.
+    return f"{skipped} link đã có trong hàng chờ, bỏ qua." if skipped else None

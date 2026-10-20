@@ -125,3 +125,20 @@ def test_pick_several_images_through_the_api(make_config):
         res = c.post(f"/api/jobs/{job['id']}/pick", data={"candidate": "02.jpg", "extra": ["03.jpg", "01.jpg"]})
         assert res.status_code == 200, res.text
         assert res.json()["extra_ingredients"] == ["ingredient-1.jpg", "ingredient-2.jpg"]
+
+
+def test_reveal_shows_the_job_video_in_finder(client, monkeypatch):
+    from app.api import jobs_routes
+
+    opened = []
+    monkeypatch.setattr(jobs_routes.subprocess, "run", lambda args, check: opened.append(args))
+    res = client.post("/api/jobs", files=[("images", ("a.png", png_bytes(), "image/png"))],
+                      data={"auto_gates": json.dumps({"cutout": True, "prompt": True})})
+    job_id = res.json()[0]["id"]
+    assert client.post(f"/api/jobs/{job_id}/reveal").status_code == 404  # no video yet
+    wait_for(client, job_id, lambda j: j["gate"] == "flow_video")
+    client.post(f"/api/jobs/{job_id}/approve", json={})
+    wait_for(client, job_id, lambda j: j["status"] == "done")
+    assert client.post(f"/api/jobs/{job_id}/reveal").status_code == 200
+    assert opened[-1][:2] == ["open", "-R"]
+    assert opened[-1][2].endswith(f"{job_id}/final-4k60.mp4")  # the project's copy, not the exported one

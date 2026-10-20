@@ -103,7 +103,8 @@ def open_studio(ctx: JobContext) -> BrowserStudio:  # replaced in tests
 def run_tiktok_post(ctx: JobContext) -> None:
     job = ctx.job
     if job.post.mode is None:
-        offer_buttons(ctx)
+        if ctx.config.tiktok.post_enabled:
+            offer_buttons(ctx)
         return
     try:
         if not job.post.done_at:

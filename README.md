@@ -24,7 +24,7 @@ Telegram / giao diện ─▶ Đọc TikTok ─▶ Chọn ảnh ─▶ Tách n�
 6. **Sinh video trên Google Flow, chế độ Agent:** tool tạo dự án mới, đặt Agent luôn hỏi trước khi sinh, tải ảnh làm nguyên liệu, gửi yêu cầu kèm mô hình, tỉ lệ, độ phân giải, thời lượng. Agent hỏi lại "… costing 15 credits?": tool đọc số credit, chỉ bấm **Approve** khi không vượt `flow.max_credits`, ngược lại bấm **Reject**.
 7. **Tải video** bản gốc 720p về. *Điểm duyệt 3.*
 8. **Nâng chất lượng:** nội suy lên 60fps (RIFE), phóng to 2K (tắt bằng `video.upscale: false` thì giữ nguyên kích thước video tải từ Flow), đè logo của bạn lên dấu ✦ của Flow ở góc dưới phải (tuỳ chọn `logo.enabled`), mã hoá HEVC.
-9. **Xuất file** `{tên}_{ngày-giờ}_2k60.mp4` vào thư mục xuất (mặc định `~/Movies/AI-Video-Creator`).
+9. **Xuất file:** video nằm trong `jobs/<id>/final-4k60.mp4`. Nếu đặt `paths.export_dir` (ví dụ `~/Movies/AI-Video-Creator`) thì chép thêm một bản tên `{tên}_{ngày-giờ}_1080p60.mp4` ra đó.
 10. **Tìm hashtag:** hỏi Chế độ AI của Google 10 hashtag ứng viên theo loại sản phẩm, kiểm tra từng cái trên TikTok (có tồn tại, ít nhất 1.000 video) và giữ 3 cái đầu tiên đạt (khoảng 15–25 giây; Google lỗi thì Claude đưa ứng viên; không làm hỏng job).
 11. **Trả về Telegram**, ngay dưới tin gửi link: chính file video đã xuất (không mã hoá lại), rồi một tin chỉ có tên sản phẩm và 3 hashtag để copy.
 12. *(Tuỳ chọn, đang tắt)* **Lưu nháp TikTok Studio:** tải video lên, mô tả là tên sản phẩm, bật nhãn "AI-generated content", bấm **Save draft**. Không bao giờ bấm Post.
@@ -62,7 +62,7 @@ Script tạo `.venv`, tải Real-ESRGAN, RIFE, mô hình tách nền (khoảng 1
 
 1. Lần đầu: bấm **Mở Chrome cho Flow**, đăng nhập Google (tài khoản có gói AI Pro/Ultra) trong cửa sổ Chrome đó. Hồ sơ lưu ở `chrome-profile/` (không lên git), các lần sau không phải đăng nhập lại. Có thể thu nhỏ cửa sổ này; nếu lỡ đóng hết cửa sổ, tool tự mở lại khi cần.
 2. Kéo ảnh sản phẩm vào khung bên trái, thêm ghi chú nếu muốn, chọn các ô tự động, bấm **Bắt đầu**.
-3. Duyệt ở từng điểm dừng. Video thành phẩm nằm trong `paths.export_dir`.
+3. Duyệt ở từng điểm dừng. Video thành phẩm nằm trong `jobs/<id>/` (nút **Mở trong Finder**), hoặc trong `paths.export_dir` nếu có đặt.
 
 ## Gửi link TikTok Shop từ điện thoại (Telegram)
 
@@ -75,7 +75,7 @@ Cài một lần:
 Bot chỉ nhận link từ những ID đã khai báo. Sau khi nhận link, tool đọc trang rồi gửi **một ảnh ghép đánh số các ảnh sản phẩm** ngay dưới tin của bạn, kèm hàng nút số. Bấm số để chọn hoặc bỏ chọn (tối đa `flow.max_ingredients` ảnh, ảnh bấm đầu là ảnh chính, nút hiện `✅3·chính`, `✅6·2`), rồi bấm **▶ Bắt đầu**: tool tự chạy đến khi xuất video. Chọn trên giao diện tool cũng được; bên nào chọn trước thì tính bên đó.
 
 Khi video xong, bot **trả lời ngay dưới tin bạn gửi link**, theo thứ tự:
-- chính file video đã xuất (1080p 60fps, 10 giây khoảng 30MB, không mã hoá lại), kèm tên sản phẩm, link và tên file trên Mac. Quá 50MB thì bot gửi một dòng cho biết file nằm ở đâu trên Mac, vì Telegram giới hạn bot gửi file tối đa 50MB;
+- chính file video đã xuất (1080p 60fps, 10 giây khoảng 30MB, không mã hoá lại), chú thích chỉ có link sản phẩm. Quá 50MB thì bot gửi một dòng cho biết file nằm ở đâu trên Mac, vì Telegram giới hạn bot gửi file tối đa 50MB;
 - một tin chỉ có tên sản phẩm và 3 hashtag ở dòng dưới, để bấm giữ là copy được làm caption. Mỗi hashtag đã được kiểm tra là có thật trên TikTok; nếu không kiểm tra được (ví dụ mạng chặn TikTok) thì dòng hashtag kết thúc bằng "(chưa xác minh)".
 
 Nếu gửi lỗi (mất mạng...), video vẫn đã xuất trên Mac; bấm **Thử lại** ở bước "Gửi Telegram" để gửi lại phần còn thiếu.

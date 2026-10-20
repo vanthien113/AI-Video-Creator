@@ -58,8 +58,7 @@ def test_sends_the_exported_video_itself_then_bare_title_as_replies(telegram_job
     assert kind1 == "video" and video["chat_id"] == 111 and video["reply_to"] == 42
     assert video["name"] == "son-kem_20261015-1700_4k60.mp4"  # the exported file, not a re-encoded copy
     assert video["width"] == 360 and video["height"] == 640
-    assert "Son Kem Lì Velvet" in video["caption"] and URL in video["caption"]
-    assert "son-kem_20261015-1700_4k60.mp4" in video["caption"]
+    assert video["caption"] == URL  # the link only
     assert kind2 == "message" and title["text"] == "Son Kem Lì Velvet" and title["reply_to"] == 42  # copy-ready
     assert ctx.job.telegram.preview_sent and ctx.job.telegram.file_sent and ctx.job.telegram.title_sent
     assert not ctx.path("preview-1080p.mp4").exists()

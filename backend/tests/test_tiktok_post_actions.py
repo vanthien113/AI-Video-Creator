@@ -36,6 +36,17 @@ def test_request_post_runs_the_post_step_once(rig):
         actions.request_post(job_id, "now")  # second tap, or the other side (tool / Telegram)
 
 
+def test_request_post_is_refused_while_posting_is_off(rig):
+    store, runner, actions, calls, _ = rig
+    job_id = done_link_job(store, runner)
+    calls.clear()
+    actions.config.tiktok.post_enabled = False
+    with pytest.raises(InvalidAction, match="tạm tắt"):
+        actions.request_post(job_id, "now")  # also an old Telegram button tapped after switching it off
+    drain(store, runner)
+    assert calls == [] and store.get(job_id).post.mode is None
+
+
 def test_request_post_only_for_finished_link_jobs_with_a_product_id(rig):
     store, runner, actions, _, _ = rig
     upload = new_job(store, ALL_AUTO)

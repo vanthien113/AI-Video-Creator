@@ -4,7 +4,7 @@ server:
   port: 8765
 
 paths:
-  export_dir: ~/Movies/AI-Video-Creator
+  export_dir: ""             # trống = video chỉ nằm trong jobs/<id>/final-4k60.mp4 | ~/Movies/AI-Video-Creator = chép thêm một bản ra đó
   rules_file: ./ad-rules.md
   jobs_dir: ./jobs
   chrome_profile: ./chrome-profile
@@ -61,6 +61,7 @@ tiktok:                      # sau khi xuất file: tải lên TikTok Studio và
   ai_generated_label: true   # bật nhãn "AI-generated content"; TikTok có thể gỡ video AI trông như thật mà không gắn nhãn
   timeout_sec: 600           # thời gian tối đa chờ tải video 4K lên
   # Nút "Đăng ngay" / "Lên lịch" (trên tool và Telegram) dùng các mục dưới:
+  post_enabled: false        # TẠM TẮT: ẩn nút Đăng ngay / Lên lịch trên tool và Telegram. Bật lại: true
   post_url: https://www.tiktok.com/tiktokstudio/upload?from=creator_center&tab=video
   content_url: https://www.tiktok.com/tiktokstudio/content    # đọc giờ của bài muộn nhất khi lên lịch
   schedule_slots: [7, 9, 11, 13, 15, 17, 19, 21, 23]          # khung giờ lên lịch (giờ máy); hết khung thì sang ngày sau

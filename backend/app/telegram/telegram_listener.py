@@ -72,7 +72,7 @@ class TelegramListener:
             try:
                 self.api.send_message(chat_id, reply)
             except Exception:
-                pass  # the link is already queued; a lost "Đã nhận" is harmless
+                pass  # the link is already queued; a lost reply is harmless
 
     def _handle_tap(self, callback: dict) -> None:
         user_id = (callback.get("from") or {}).get("id")

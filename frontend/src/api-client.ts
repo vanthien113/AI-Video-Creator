@@ -35,6 +35,7 @@ export interface Settings {
   export_dir: string;
   rules_file: string;
   flow: { model: string; aspect_ratio: string; max_ingredients: number };
+  tiktok_post: boolean;
 }
 
 export interface TelegramStatus {
@@ -147,7 +148,7 @@ export const api = {
   postOnTikTok: (id: string, mode: PostMode) => post<Job>(`/api/jobs/${id}/post`, { mode }),
   flowStatus: () => request<FlowStatus>("/api/flow/status"),
   launchChrome: () => post<{ launched: boolean; message: string }>("/api/flow/launch-chrome"),
-  openExportDir: () => post<{ ok: boolean }>("/api/open-export-dir"),
+  revealVideo: (id: string) => post<{ ok: boolean }>(`/api/jobs/${id}/reveal`),
 };
 
 /** URL of a file in the job folder; `version` busts the browser cache after a step re-runs. */
