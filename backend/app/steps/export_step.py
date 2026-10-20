@@ -4,6 +4,7 @@ import shutil
 from datetime import datetime
 from pathlib import Path
 
+from .enhance_video_step import output_label
 from .step_types import JobContext, StepFailure
 
 
@@ -22,7 +23,8 @@ def run_export(ctx: JobContext) -> None:
     try:
         folder.mkdir(parents=True, exist_ok=True)
         video = ctx.config.video
-        dest = unique_path(folder, f"{ctx.job.name}_{datetime.now():%Y%m%d-%H%M}_{video.label.lower()}{video.fps}", ".mp4")
+        size_name = output_label(video, src).lower()
+        dest = unique_path(folder, f"{ctx.job.name}_{datetime.now():%Y%m%d-%H%M}_{size_name}{video.fps}", ".mp4")
         shutil.copy2(src, dest)
     except OSError as exc:
         raise StepFailure(f"Không ghi được vào thư mục xuất {folder}: {exc}") from exc

@@ -12,6 +12,11 @@ def target_size(width: int, height: int, long_edge: int) -> tuple[int, int]:
     return max(2, round(long_edge * width / height / 2) * 2), long_edge
 
 
+def even_size(width: int, height: int) -> tuple[int, int]:
+    """Same size rounded down to even dimensions, which yuv420p needs."""
+    return max(2, width // 2 * 2), max(2, height // 2 * 2)
+
+
 def target_frame_count(duration: float, fps: int) -> int:
     return max(2, round(duration * fps))
 
@@ -27,17 +32,6 @@ def rife_command(rife_bin: Path, model_dir: Path, in_dir: Path, out_dir: Path, f
     ]
 
 
-def preview_command(src: Path, out: Path, size: tuple[int, int]) -> list[str]:
-    """Small H.264 copy that plays inline on phones (Telegram), audio re-encoded to AAC."""
-    width, height = size
-    return [
-        "ffmpeg", "-y", "-v", "error", "-i", str(src),
-        "-vf", f"scale={width}:{height}:flags=lanczos,format=yuv420p",
-        "-c:v", "libx264", "-preset", "fast", "-crf", "19", "-maxrate", "12M", "-bufsize", "24M",
-        "-c:a", "aac", "-b:a", "128k", "-movflags", "+faststart", str(out),
-    ]
-
-
 def logo_box(logo, size: tuple[int, int]) -> tuple[int, int, int]:
     """(x, y, side) in output pixels for a LogoConfig; side is even so the encoder is happy."""
     width, height = size
@@ -48,15 +42,16 @@ def logo_box(logo, size: tuple[int, int]) -> tuple[int, int, int]:
 def encode_command(
     frames_dir: Path, audio_src: Path, has_audio: bool, fps: int,
     size: tuple[int, int], bitrate: str, out: Path,
-    logo: tuple[Path, int, int, int] | None = None,
+    logo: tuple[Path, int, int, int] | None = None, sharpen: bool = True,
 ) -> list[str]:
-    """`logo` = (png, x, y, side): overlaid after scaling and sharpening, so the logo itself stays crisp."""
+    """`logo` = (png, x, y, side): overlaid after scaling and sharpening, so the logo itself stays crisp.
+    `sharpen` offsets the softness of an upscale; without one there is nothing to offset."""
     width, height = size
     args = ["ffmpeg", "-y", "-v", "error", "-progress", "pipe:1", "-framerate", str(fps),
             "-i", str(frames_dir / FRAME_PATTERN)]
     if has_audio:
         args += ["-i", str(audio_src)]
-    video = f"scale={width}:{height}:flags=lanczos,unsharp=5:5:0.5:5:5:0.0"
+    video = f"scale={width}:{height}:flags=lanczos" + (",unsharp=5:5:0.5:5:5:0.0" if sharpen else "")
     if logo:
         png, x, y, side = logo
         args += ["-i", str(png)]

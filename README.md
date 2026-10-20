@@ -23,10 +23,10 @@ Telegram / giao diện ─▶ Đọc TikTok ─▶ Chọn ảnh ─▶ Tách n�
 5. **Viết prompt** bằng Claude Code (`claude -p`) từ các ảnh, thông tin sản phẩm và quy tắc trong `ad-rules.md`: câu hook tiếng Việt ở 2 giây đầu, người mẫu dùng sản phẩm, 2–3 góc quay. *Điểm duyệt 2.*
 6. **Sinh video trên Google Flow, chế độ Agent:** tool tạo dự án mới, đặt Agent luôn hỏi trước khi sinh, tải ảnh làm nguyên liệu, gửi yêu cầu kèm mô hình, tỉ lệ, độ phân giải, thời lượng. Agent hỏi lại "… costing 15 credits?": tool đọc số credit, chỉ bấm **Approve** khi không vượt `flow.max_credits`, ngược lại bấm **Reject**.
 7. **Tải video** bản gốc 720p về. *Điểm duyệt 3.*
-8. **Nâng chất lượng:** nội suy lên 60fps (RIFE), phóng to 2K, đè logo của bạn lên dấu ✦ của Flow ở góc dưới phải (tuỳ chọn `logo.enabled`), mã hoá HEVC.
+8. **Nâng chất lượng:** nội suy lên 60fps (RIFE), phóng to 2K (tắt bằng `video.upscale: false` thì giữ nguyên kích thước video tải từ Flow), đè logo của bạn lên dấu ✦ của Flow ở góc dưới phải (tuỳ chọn `logo.enabled`), mã hoá HEVC.
 9. **Xuất file** `{tên}_{ngày-giờ}_2k60.mp4` vào thư mục xuất (mặc định `~/Movies/AI-Video-Creator`).
 10. **Tìm hashtag:** hỏi Chế độ AI của Google 10 hashtag ứng viên theo loại sản phẩm, kiểm tra từng cái trên TikTok (có tồn tại, ít nhất 1.000 video) và giữ 3 cái đầu tiên đạt (khoảng 15–25 giây; Google lỗi thì Claude đưa ứng viên; không làm hỏng job).
-11. **Trả về Telegram**, ngay dưới tin gửi link: video 1080p xem nhanh, file 2K gốc, rồi một tin chỉ có tên sản phẩm và 3 hashtag để copy.
+11. **Trả về Telegram**, ngay dưới tin gửi link: chính file video đã xuất (không mã hoá lại), rồi một tin chỉ có tên sản phẩm và 3 hashtag để copy.
 12. *(Tuỳ chọn, đang tắt)* **Lưu nháp TikTok Studio:** tải video lên, mô tả là tên sản phẩm, bật nhãn "AI-generated content", bấm **Save draft**. Không bao giờ bấm Post.
 13. **Đăng TikTok (khi bạn bấm):** job tạo từ link có 2 nút **📤 Đăng ngay** và **🗓 Lên lịch**, trên tool và trong một tin Telegram riêng ngay sau tên + hashtag. Tool tải video lên TikTok Studio, điền tên + hashtag (chọn trong gợi ý của TikTok để thành hashtag thật), gắn link sản phẩm theo ID, bật nhãn AI, chọn Now hoặc khung giờ trống kế tiếp, bấm Post/Schedule, rồi kiểm tra bài trên trang Content.
 
@@ -75,8 +75,7 @@ Cài một lần:
 Bot chỉ nhận link từ những ID đã khai báo. Sau khi nhận link, tool đọc trang rồi gửi **một ảnh ghép đánh số các ảnh sản phẩm** ngay dưới tin của bạn, kèm hàng nút số. Bấm số để chọn hoặc bỏ chọn (tối đa `flow.max_ingredients` ảnh, ảnh bấm đầu là ảnh chính, nút hiện `✅3·chính`, `✅6·2`), rồi bấm **▶ Bắt đầu**: tool tự chạy đến khi xuất video. Chọn trên giao diện tool cũng được; bên nào chọn trước thì tính bên đó.
 
 Khi video xong, bot **trả lời ngay dưới tin bạn gửi link**, theo thứ tự:
-- video 1080p xem ngay, kèm tên sản phẩm, link và tên file đã xuất trên Mac;
-- file 2K 60fps gốc dạng tệp đính kèm nếu không quá 50MB (2K 10 giây khoảng 30MB). Vượt quá thì bot gửi một dòng cho biết file nằm ở đâu trên Mac, vì Telegram giới hạn bot gửi file tối đa 50MB;
+- chính file video đã xuất (1080p 60fps, 10 giây khoảng 30MB, không mã hoá lại), kèm tên sản phẩm, link và tên file trên Mac. Quá 50MB thì bot gửi một dòng cho biết file nằm ở đâu trên Mac, vì Telegram giới hạn bot gửi file tối đa 50MB;
 - một tin chỉ có tên sản phẩm và 3 hashtag ở dòng dưới, để bấm giữ là copy được làm caption. Mỗi hashtag đã được kiểm tra là có thật trên TikTok; nếu không kiểm tra được (ví dụ mạng chặn TikTok) thì dòng hashtag kết thúc bằng "(chưa xác minh)".
 
 Nếu gửi lỗi (mất mạng...), video vẫn đã xuất trên Mac; bấm **Thử lại** ở bước "Gửi Telegram" để gửi lại phần còn thiếu.
@@ -151,7 +150,7 @@ Trong lúc chờ sửa, khi bước Flow lỗi bạn vẫn có thể tự sinh v
 
 Từ lúc chọn ảnh đến khi nhận video trên Telegram khoảng 8 phút (một job đo ngày 2026-10-15, chưa tính thời gian duyệt): tách nền ~20s, upscale ~20s, prompt ~25s, Flow ~4,5 phút (có lúc phải xếp hàng), tải video ~1 phút, nâng 60fps ~1,5 phút cho clip 10 giây, gửi Telegram ~20s.
 
-Tool tải bản gốc 720p (`flow.download: original`) rồi tự nâng lên 2K 60fps; Flow cũng cho tải bản 1080p (`flow.download: 1080p`). Video Flow có watermark ✦ nhỏ ở góc dưới bên phải (48×48px trên bản 720p); khi bật `logo.enabled`, logo của bạn được đè kín lên đó.
+Tool tải bản 1080p của Flow (`flow.download: 1080p`, Flow nâng lên mất khoảng 1 phút; nếu tài khoản bị khoá 1080p thì tự lùi về bản gốc 720p) rồi tự nâng lên 60fps, phóng to 2K nếu bật `video.upscale`; muốn tải thẳng bản gốc 720p thì đặt `flow.download: original`. Video Flow có watermark ✦ nhỏ ở góc dưới bên phải (48×48px trên bản 720p); khi bật `logo.enabled`, logo của bạn được đè kín lên đó.
 
 ## Lưu ý
 

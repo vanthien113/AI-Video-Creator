@@ -33,6 +33,19 @@ def test_enhance_makes_4k60_with_audio(make_context, make_config, width, height,
     assert not ctx.path("tmp").exists()
 
 
+@needs_rife
+def test_enhance_without_upscale_keeps_the_size(make_context, make_config):
+    ctx = make_context(config=make_config(video=VideoConfig(upscale=False, min_free_gb=0.5)))
+    make_test_clip(ctx.path("flow-raw.mp4"), width=360, height=640)
+
+    run_enhance(ctx)
+
+    info = probe_video(ctx.path("final-4k60.mp4"))
+    assert (info.width, info.height) == (360, 640)
+    assert round(info.fps) == 60
+    assert info.has_audio
+
+
 @needs_esrgan
 @pytest.mark.parametrize("background", ["white", "transparent"])
 def test_upscale_fits_long_edge_and_background(make_context, make_config, background):

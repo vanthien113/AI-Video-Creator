@@ -1,16 +1,27 @@
-"""Step 6: RIFE frame interpolation to 60fps, then lanczos upscale to video.long_edge with HEVC encoding."""
+"""Step 6: RIFE frame interpolation to 60fps, then lanczos upscale to video.long_edge (unless video.upscale is
+off) with HEVC encoding."""
 
 import shutil
+from pathlib import Path
 
+from ..config import VideoConfig, size_label
 from ..media.command_runner import RIFE_BIN, RIFE_MODELS_DIR, require_tool, run_tool
 from ..media.ffmpeg_commands import (
-    encode_command, extract_frames_command, logo_box, rife_command, target_frame_count, target_size,
+    encode_command, even_size, extract_frames_command, logo_box, rife_command, target_frame_count, target_size,
 )
 from ..media.video_probe import probe_video
 from .step_types import JobContext, StepFailure
 
 # Share of the progress bar given to each phase.
 EXTRACT, INTERPOLATE, ENCODE = 0.1, 0.6, 0.3
+
+
+def output_label(cfg: VideoConfig, final: Path) -> str:
+    """Size name of the finished video: video.long_edge when upscaling, else whatever size Flow gave."""
+    if cfg.upscale:
+        return cfg.label
+    info = probe_video(final)
+    return size_label(max(info.width, info.height))
 
 
 def run_enhance(ctx: JobContext) -> None:
@@ -31,7 +42,7 @@ def run_enhance(ctx: JobContext) -> None:
     if not model_dir.is_dir():
         raise StepFailure(f"Thiếu mô hình RIFE {cfg.rife_model} trong bin/rife.")
     frame_count = target_frame_count(info.duration, cfg.fps)
-    size = target_size(info.width, info.height, cfg.long_edge)
+    size = target_size(info.width, info.height, cfg.long_edge) if cfg.upscale else even_size(info.width, info.height)
     ctx.log(f"enhance: {info} → {frame_count} frames @ {cfg.fps}fps, {size}")
     logo = None
     if ctx.config.logo.enabled:
@@ -67,8 +78,10 @@ def run_enhance(ctx: JobContext) -> None:
                 ctx.report(EXTRACT + INTERPOLATE + ENCODE * done / produced,
                            f"Mã hoá {size[0]}×{size[1]} {done}/{produced}")
 
-        run_tool(encode_command(frames_out, src, info.has_audio, cfg.fps, size, cfg.bitrate, out, logo=logo),
-                 timeout=3600, on_line=encode_progress, should_stop=ctx.is_cancelled, label=f"ffmpeg (mã hoá {cfg.label})")
+        run_tool(encode_command(frames_out, src, info.has_audio, cfg.fps, size, cfg.bitrate, out, logo=logo,
+                                sharpen=cfg.upscale),
+                 timeout=3600, on_line=encode_progress, should_stop=ctx.is_cancelled,
+                 label=f"ffmpeg (mã hoá {size_label(max(size))})")
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
 

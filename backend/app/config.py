@@ -62,8 +62,14 @@ class FlowConfig(BaseModel):
     chrome_app: str = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
 
 
+def size_label(long_edge: int) -> str:
+    """Name of a video size for file names and messages: 3840 → "4K", 2560 → "2K", 1920 → "1080p"."""
+    return {3840: "4K", 2560: "2K", 1920: "1080p", 1280: "720p"}.get(long_edge, f"{long_edge}p")
+
+
 class VideoConfig(BaseModel):
     fps: int = Field(60, ge=24, le=120)
+    upscale: bool = True  # False = keep the size Flow gave, only interpolate to fps
     long_edge: int = Field(3840, ge=720, le=7680)
     rife_model: str = "rife-v4.6"
     bitrate: str = "45M"
@@ -71,8 +77,8 @@ class VideoConfig(BaseModel):
 
     @property
     def label(self) -> str:
-        """Name of the output size for file names and messages: 3840 → "4K", 2560 → "2K", 1920 → "1080p"."""
-        return {3840: "4K", 2560: "2K", 1920: "1080p", 1280: "720p"}.get(self.long_edge, f"{self.long_edge}p")
+        """Name of long_edge, the output size when upscaling."""
+        return size_label(self.long_edge)
 
 
 class LogoConfig(BaseModel):

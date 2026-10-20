@@ -1,4 +1,4 @@
-"""Sending the finished video back to Telegram: real ffmpeg preview, fake Bot API."""
+"""Sending the finished video back to Telegram: real clip, fake Bot API."""
 
 import json
 
@@ -51,46 +51,53 @@ def telegram_job(make_context, tmp_path, monkeypatch):
     return ctx, api
 
 
-def test_sends_preview_then_4k_file_then_bare_title_as_replies(telegram_job):
+def test_sends_the_exported_video_itself_then_bare_title_as_replies(telegram_job):
     ctx, api = telegram_job
     run_send_telegram(ctx)
-    (kind1, video), (kind2, doc), (kind3, title) = api.calls
+    (kind1, video), (kind2, title) = api.calls
     assert kind1 == "video" and video["chat_id"] == 111 and video["reply_to"] == 42
-    assert video["width"] == 1080 and video["height"] == 1920  # 1080p portrait preview
+    assert video["name"] == "son-kem_20261015-1700_4k60.mp4"  # the exported file, not a re-encoded copy
+    assert video["width"] == 360 and video["height"] == 640
     assert "Son Kem Lì Velvet" in video["caption"] and URL in video["caption"]
     assert "son-kem_20261015-1700_4k60.mp4" in video["caption"]
-    assert kind2 == "document" and doc["name"] == "son-kem_20261015-1700_4k60.mp4"
-    assert kind3 == "message" and title["text"] == "Son Kem Lì Velvet" and title["reply_to"] == 42  # copy-ready
+    assert kind2 == "message" and title["text"] == "Son Kem Lì Velvet" and title["reply_to"] == 42  # copy-ready
     assert ctx.job.telegram.preview_sent and ctx.job.telegram.file_sent and ctx.job.telegram.title_sent
+    assert not ctx.path("preview-1080p.mp4").exists()
 
 
 def test_no_title_message_without_a_product_title(telegram_job):
     ctx, api = telegram_job
     ctx.job.source = None
     run_send_telegram(ctx)
-    assert [kind for kind, _ in api.calls] == ["video", "document"]
+    assert [kind for kind, _ in api.calls] == ["video"]
 
 
-def test_big_4k_file_is_replaced_by_a_note(telegram_job, monkeypatch):
+def test_big_file_is_replaced_by_a_note(telegram_job, monkeypatch):
     ctx, api = telegram_job
-    ctx.job.telegram.preview_sent = True
     monkeypatch.setattr(send_telegram_step, "MAX_UPLOAD_BYTES", 10)
     run_send_telegram(ctx)
-    (kind, note), _title = api.calls
+    (kind, note), _title = api.calls  # no video: nothing is re-encoded to make it fit
     assert kind == "message" and "vượt giới hạn 50MB" in note["text"] and note["reply_to"] == 42
+
+
+def test_job_whose_preview_already_went_out_still_gets_the_file(telegram_job):
+    ctx, api = telegram_job
+    ctx.job.telegram.preview_sent = True
+    run_send_telegram(ctx)
+    assert [kind for kind, _ in api.calls] == ["document", "message"]
 
 
 def test_retry_after_failure_sends_only_what_is_missing(telegram_job, monkeypatch):
     ctx, api = telegram_job
-    api.fail_on = "document"
+    api.fail_on = "message"
     with pytest.raises(StepFailure, match="Thử lại"):
         run_send_telegram(ctx)
-    assert ctx.job.telegram.preview_sent and not ctx.job.telegram.file_sent
+    assert ctx.job.telegram.preview_sent and ctx.job.telegram.file_sent and not ctx.job.telegram.title_sent
 
     api.fail_on = None
     api.calls.clear()
     run_send_telegram(ctx)
-    assert [kind for kind, _ in api.calls] == ["document", "message"]  # no second preview video
+    assert [kind for kind, _ in api.calls] == ["message"]  # no second video
 
     api.calls.clear()
     run_send_telegram(ctx)

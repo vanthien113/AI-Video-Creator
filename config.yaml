@@ -33,14 +33,15 @@ flow:
   outputs: 1                 # số video mỗi lượt sinh
   max_ingredients: 3         # số ảnh tối đa chọn cho 1 video (ảnh chính + ảnh tham khảo), đã thử Flow nhận 3
   max_credits: 20            # Agent định tiêu nhiều hơn mức này thì tool bấm Reject (Veo 3.1 - Quality cần ≥ 100)
-  download: original         # original = bản gốc 720p của Flow (tool tự nâng lên sau) | 1080p
+  download: 1080p            # 1080p = Flow nâng lên 1080p rồi tải (~1 phút; bị khoá thì tự lùi về bản gốc) | original = bản gốc 720p
   timeout_sec: 600
   cdp_port: 9222
   chrome_app: /Applications/Google Chrome.app/Contents/MacOS/Google Chrome
 
 video:
   fps: 60
-  long_edge: 2560             # cạnh dài video xuất: 2560 = 2K (1440×2560), 3840 = 4K, 1920 = 1080p
+  upscale: false             # false = giữ nguyên kích thước video tải từ Flow, chỉ nâng 60fps | true = phóng to lên long_edge
+  long_edge: 2560             # chỉ dùng khi upscale: true. Cạnh dài video xuất: 2560 = 2K (1440×2560), 3840 = 4K, 1920 = 1080p
   rife_model: rife-v4.6
   bitrate: 24M               # 2K 60fps; 10 giây ≈ 30MB, dưới giới hạn 50MB của Telegram (4K nên dùng 45M)
   min_free_gb: 3

@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pytest
 
-from app.media.ffmpeg_commands import encode_command, target_frame_count, target_size
+from app.media.ffmpeg_commands import encode_command, even_size, target_frame_count, target_size
 from app.media.image_io import padded_box
 from app.media.video_probe import parse_probe
 from app.mac_notification import applescript_string
@@ -25,6 +25,11 @@ def test_target_size(w, h, edge, expected):
     assert target_size(w, h, edge) == expected
 
 
+def test_even_size_keeps_the_size():
+    assert even_size(1080, 1920) == (1080, 1920)
+    assert even_size(721, 1281) == (720, 1280)
+
+
 def test_target_frame_count():
     assert target_frame_count(8.0, 60) == 480
     assert target_frame_count(7.958, 60) == 477
@@ -37,6 +42,14 @@ def test_encode_command_maps_audio_only_when_present(tmp_path: Path):
     assert "1:a:0" not in without
     assert "hevc_videotoolbox" in with_audio and "hvc1" in with_audio
     assert any("scale=3840:2160" in a for a in with_audio)
+
+
+def test_encode_command_sharpens_only_an_upscale(tmp_path: Path):
+    upscaled = encode_command(tmp_path, tmp_path / "a.mp4", True, 60, (1440, 2560), "24M", tmp_path / "o.mp4")
+    kept = encode_command(tmp_path, tmp_path / "a.mp4", True, 60, (1080, 1920), "24M", tmp_path / "o.mp4",
+                          sharpen=False)
+    assert any("unsharp" in a for a in upscaled)
+    assert not any("unsharp" in a for a in kept) and any("scale=1080:1920" in a for a in kept)
 
 
 def test_parse_probe():
