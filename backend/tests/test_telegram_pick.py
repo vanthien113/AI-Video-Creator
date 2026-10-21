@@ -115,7 +115,7 @@ def test_buttons_pick_images_then_start_the_job(picking):
     picked = store.get(job_id)
     assert picked.input_file == "input.jpg" and picked.extra_ingredients == ["ingredient-1.jpg"]
     assert picked.status == JobStatus.queued and picked.current_step == "cutout"
-    assert "Đã chọn ảnh 3, 5" in api.captions[-1][2]
+    assert api.captions[-1][2] == "Đã chọn 2 ảnh. Đang tạo video…"  # no ticks, no "main image" note
 
 
 def test_start_without_a_pick_only_explains(picking):

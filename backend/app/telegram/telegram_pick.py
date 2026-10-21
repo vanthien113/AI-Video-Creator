@@ -123,9 +123,7 @@ class PickHandler:
             self.actions.pick_image(job.id, candidate=selection[0], extras=selection[1:])
         except InvalidAction as exc:
             return str(exc)[:190]
-        numbers = ", ".join(str(names.index(n) + 1) for n in selection)
-        self._edit(self.api.edit_caption, chat_id, message_id,
-                   f"✅ Đã chọn ảnh {numbers} (ảnh {names.index(selection[0]) + 1} là ảnh chính). Đang tạo video…")
+        self._edit(self.api.edit_caption, chat_id, message_id, f"Đã chọn {len(selection)} ảnh. Đang tạo video…")
         return "Bắt đầu!"
 
     @staticmethod
