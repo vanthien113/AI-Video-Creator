@@ -39,9 +39,11 @@ class TelegramApi:
                                        "disable_web_page_preview": True}, as_json=True)
 
     def send_video(self, chat_id: int, path: Path, caption: str, reply_to: int | None = None,
-                   width: int = 0, height: int = 0, duration: int = 0) -> None:
+                   width: int = 0, height: int = 0, duration: int = 0, parse_mode: str | None = None) -> None:
         data = {"chat_id": chat_id, "caption": caption[:1024], "supports_streaming": "true",
                 "width": width, "height": height, "duration": duration, **self._reply(reply_to)}
+        if parse_mode:
+            data["parse_mode"] = parse_mode
         self._upload("sendVideo", "video", path, "video/mp4", data)
 
     def send_document(self, chat_id: int, path: Path, caption: str, reply_to: int | None = None) -> None:

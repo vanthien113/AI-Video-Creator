@@ -26,9 +26,10 @@ Telegram / giao diện ─▶ Đọc TikTok ─▶ Chọn ảnh ─▶ Tách n�
 8. **Nâng chất lượng:** nội suy lên 60fps (RIFE), phóng to 2K (tắt bằng `video.upscale: false` thì giữ nguyên kích thước video tải từ Flow), đè logo của bạn lên dấu ✦ của Flow ở góc dưới phải (tuỳ chọn `logo.enabled`), mã hoá HEVC.
 9. **Xuất file:** video nằm trong `jobs/<id>/final-4k60.mp4`. Nếu đặt `paths.export_dir` (ví dụ `~/Movies/AI-Video-Creator`) thì chép thêm một bản tên `{tên}_{ngày-giờ}_1080p60.mp4` ra đó.
 10. **Tìm hashtag:** hỏi Chế độ AI của Google 10 hashtag ứng viên theo loại sản phẩm, kiểm tra từng cái trên TikTok (có tồn tại, ít nhất 1.000 video) và giữ 3 cái đầu tiên đạt (khoảng 15–25 giây; Google lỗi thì Claude đưa ứng viên; không làm hỏng job).
-11. **Trả về Telegram**, ngay dưới tin gửi link: chính file video đã xuất (không mã hoá lại), rồi một tin chỉ có tên sản phẩm và 3 hashtag để copy.
-12. *(Tuỳ chọn, đang tắt)* **Lưu nháp TikTok Studio:** tải video lên, mô tả là tên sản phẩm, bật nhãn "AI-generated content", bấm **Save draft**. Không bao giờ bấm Post.
-13. **Đăng TikTok (khi bạn bấm):** job tạo từ link có 2 nút **📤 Đăng ngay** và **🗓 Lên lịch**, trên tool và trong một tin Telegram riêng ngay sau tên + hashtag. Tool tải video lên TikTok Studio, điền tên + hashtag (chọn trong gợi ý của TikTok để thành hashtag thật), gắn link sản phẩm theo ID, bật nhãn AI, chọn Now hoặc khung giờ trống kế tiếp, bấm Post/Schedule, rồi kiểm tra bài trên trang Content.
+11. **Tìm link Shopee** *(tắt bằng `shopee.enabled: false`)*: tìm ảnh chính bằng Google Lens kèm chữ "tìm trên shopee", đọc tối đa `shopee.max_candidates` (mặc định 3) trang sản phẩm Shopee theo thứ tự Google trả về. Chọn sản phẩm của shop trùng tên shop bên TikTok (dòng "Sold by …"), không có thì chọn sản phẩm có lượt bán cao nhất, bằng nhau thì xét số sao. Shopee bắt xác minh chống bot (hoặc trang không mở được) thì dừng đọc: chọn trong các trang đã đọc; chưa đọc được trang nào thì lấy kết quả Shopee đầu tiên của Google, gửi kèm dấu ⚠️ chưa kiểm tra shop. Không làm hỏng job.
+12. **Trả về Telegram**, ngay dưới tin gửi link: chính file video đã xuất (không mã hoá lại), rồi một tin chỉ có tên sản phẩm và 3 hashtag để copy.
+13. *(Tuỳ chọn, đang tắt)* **Lưu nháp TikTok Studio:** tải video lên, mô tả là tên sản phẩm, bật nhãn "AI-generated content", bấm **Save draft**. Không bao giờ bấm Post.
+14. **Đăng TikTok (khi bạn bấm):** job tạo từ link có 2 nút **📤 Đăng ngay** và **🗓 Lên lịch**, trên tool và trong một tin Telegram riêng ngay sau tên + hashtag. Tool tải video lên TikTok Studio, điền tên + hashtag (chọn trong gợi ý của TikTok để thành hashtag thật), gắn link sản phẩm theo ID, bật nhãn AI, chọn Now hoặc khung giờ trống kế tiếp, bấm Post/Schedule, rồi kiểm tra bài trên trang Content.
 
 Job từ link Telegram chạy thẳng không dừng sau khi chọn ảnh. Job tạo trên giao diện dừng ở 3 điểm duyệt, mỗi điểm có ô "tự động chạy tiếp".
 
@@ -75,7 +76,7 @@ Cài một lần:
 Bot chỉ nhận link từ những ID đã khai báo. Sau khi nhận link, tool đọc trang rồi gửi **một ảnh ghép đánh số các ảnh sản phẩm** ngay dưới tin của bạn, kèm hàng nút số. Bấm số để chọn hoặc bỏ chọn (tối đa `flow.max_ingredients` ảnh, ảnh bấm đầu là ảnh chính, nút hiện `✅3·chính`, `✅6·2`), rồi bấm **▶ Bắt đầu**: tool tự chạy đến khi xuất video. Chọn trên giao diện tool cũng được; bên nào chọn trước thì tính bên đó.
 
 Khi video xong, bot **trả lời ngay dưới tin bạn gửi link**, theo thứ tự:
-- chính file video đã xuất (1080p 60fps, 10 giây khoảng 30MB, không mã hoá lại), chú thích chỉ có link sản phẩm. Quá 50MB thì bot gửi một dòng cho biết file nằm ở đâu trên Mac, vì Telegram giới hạn bot gửi file tối đa 50MB;
+- chính file video đã xuất (1080p 60fps, 10 giây khoảng 30MB, không mã hoá lại), chú thích là link sản phẩm TikTok, kèm một dòng **🛒 Shopee: <tên shop>** bấm vào mở sản phẩm Shopee nếu tìm được (**🛒 Shopee ⚠️ chưa kiểm tra shop** khi Shopee chặn, đó là kết quả đầu tiên của Google). Quá 50MB thì bot gửi một dòng cho biết file nằm ở đâu trên Mac, vì Telegram giới hạn bot gửi file tối đa 50MB;
 - một tin chỉ có tên sản phẩm và 3 hashtag ở dòng dưới, để bấm giữ là copy được làm caption. Mỗi hashtag đã được kiểm tra là có thật trên TikTok; nếu không kiểm tra được (ví dụ mạng chặn TikTok) thì dòng hashtag kết thúc bằng "(chưa xác minh)".
 
 Nếu gửi lỗi (mất mạng...), video vẫn đã xuất trên Mac; bấm **Thử lại** ở bước "Gửi Telegram" để gửi lại phần còn thiếu.

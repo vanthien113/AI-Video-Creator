@@ -25,7 +25,9 @@ COLLECT_JS = """() => ({
     .sort((a, b) => a.length - b.length)[0] || '',
   ogImages: [...document.querySelectorAll('meta[property="og:image"]')].map(m => m.content).filter(Boolean),
   images: [...document.images].map(i => ({src: i.currentSrc || i.src, w: i.naturalWidth, h: i.naturalHeight})),
-  text: document.body ? document.body.innerText.slice(0, 3000) : ''
+  text: document.body ? document.body.innerText.slice(0, 3000) : '',
+  // "Sold by LOURA" (seen 2026-10-21) sits far below the description, past the 3000 characters above.
+  sellerLines: document.body ? document.body.innerText.split('\\n').filter(l => /^\\s*(Sold by|Được bán bởi|Bán bởi)\\s/i.test(l)).slice(0, 3) : []
 })"""
 
 BLOCKED_PAGE = re.compile(r"captcha|verify to continue|slide to complete|xác minh|log in to continue|đăng nhập để", re.I)
@@ -53,6 +55,7 @@ class ProductPage:
     title: str
     description: str
     image_urls: list[str] = field(default_factory=list)
+    shop: str = ""
 
 
 def image_key(url: str) -> str:
@@ -107,6 +110,17 @@ def blocked_reason(status: int | None, title: str, text: str) -> str | None:
         return ("TikTok yêu cầu xác minh hoặc đăng nhập. Mở link này trong cửa sổ Chrome của tool, "
                 "xác minh xong rồi bấm 'Thử lại'.")
     return None
+
+
+SELLER = re.compile(r"^\s*(?:Sold by|Được bán bởi|Bán bởi)\s+(.+?)\s*$", re.I)
+
+
+def shop_name(seller_lines: list[str]) -> str:
+    """'LOURA' from the page's "Sold by LOURA" line; "" when there is none."""
+    for line in seller_lines:
+        if m := SELLER.match(line):
+            return " ".join(m.group(1).split())
+    return ""
 
 
 def clean_title(title: str) -> str:
@@ -172,7 +186,8 @@ def read_product_page(page, url: str, timeout_ms: int = 60000) -> ProductPage:
         raise SourceError("Không thấy ảnh sản phẩm trên trang. Link có đúng là trang sản phẩm TikTok Shop không?")
     title = clean_title(data["title"])
     description = pick_description(data.get("descriptionBlock", ""), data["description"], title)
-    return ProductPage(url=data["url"], title=title, description=description, image_urls=urls)
+    return ProductPage(url=data["url"], title=title, description=description, image_urls=urls,
+                       shop=shop_name(data.get("sellerLines") or []))
 
 
 def download_images(request, urls: list[str], dest_dir: Path, min_side: int = 400,

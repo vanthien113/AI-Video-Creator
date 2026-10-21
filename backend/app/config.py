@@ -81,6 +81,11 @@ class VideoConfig(BaseModel):
         return size_label(self.long_edge)
 
 
+class ShopeeConfig(BaseModel):
+    enabled: bool = True  # look for the product on Shopee and send the link with the video
+    max_candidates: int = Field(3, ge=1, le=10)  # Shopee product pages read per video (Shopee checks for bots)
+
+
 class LogoConfig(BaseModel):
     """Our logo over Flow's ✦ mark, placed as fractions of the frame so it fits any output size.
     Defaults measured on five 720×1280 Flow downloads (2026-10-16): the mark is 48×48 px centred at
@@ -154,6 +159,7 @@ class AppConfig(BaseModel):
     review: ReviewConfig = ReviewConfig()
     telegram: TelegramConfig = TelegramConfig()
     tiktok: TikTokConfig = TikTokConfig()
+    shopee: ShopeeConfig = ShopeeConfig()
     logo: LogoConfig = LogoConfig()
 
 

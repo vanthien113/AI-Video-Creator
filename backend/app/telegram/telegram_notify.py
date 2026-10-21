@@ -13,7 +13,7 @@ from .telegram_api import TelegramApi, TelegramApiError
 
 STEP_NAMES = {
     "fetch_source": "Đọc TikTok", "cutout": "Tách nền", "upscale": "Upscale", "prompt": "Prompt",
-    "flow_generate": "Flow sinh", "flow_download": "Tải video", "enhance": "Nâng 60fps", "export": "Xuất file", "hashtags": "Hashtag",
+    "flow_generate": "Flow sinh", "flow_download": "Tải video", "enhance": "Nâng 60fps", "export": "Xuất file", "hashtags": "Hashtag", "shopee": "Tìm Shopee",
     "send_telegram": "Gửi Telegram", "tiktok_draft": "Lưu nháp TikTok", "tiktok_post": "Đăng TikTok",
 }
 

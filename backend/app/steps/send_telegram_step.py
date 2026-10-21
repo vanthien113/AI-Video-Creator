@@ -5,6 +5,7 @@ Only jobs that came from Telegram do anything here. Each part is marked as sent 
 so "Thử lại" after a network error never posts the same video twice.
 """
 
+import html
 from pathlib import Path
 
 from ..job_models import JobState
@@ -19,8 +20,14 @@ def make_api(token: str) -> TelegramApi:  # replaced in tests
 
 
 def build_caption(job: JobState) -> str:
-    """Only the product link: the title and hashtags follow in a message of their own."""
-    return job.source.url if job.source else ""
+    """HTML: the product link, then the Shopee match as one short tappable line (its long address stays hidden).
+    The title and hashtags follow in a message of their own."""
+    lines = [html.escape(job.source.url)] if job.source else []
+    if job.shopee:
+        label = ("🛒 Shopee ⚠️ chưa kiểm tra shop" if not job.shopee.checked
+                 else f"🛒 Shopee: {job.shopee.shop}" if job.shopee.shop else "🛒 Shopee")
+        lines.append(f'<a href="{html.escape(job.shopee.url)}">{html.escape(label)}</a>')
+    return "\n".join(lines)
 
 
 def upload_file(ctx: JobContext, final: Path) -> Path:
@@ -49,7 +56,7 @@ def run_send_telegram(ctx: JobContext) -> None:
             ctx.report(0.3, f"Gửi video {size_name} lên Telegram")
             info = probe_video(final)
             api.send_video(origin.chat_id, upload_file(ctx, final), build_caption(ctx.job), reply_to=origin.message_id,
-                           width=info.width, height=info.height, duration=round(info.duration))
+                           width=info.width, height=info.height, duration=round(info.duration), parse_mode="HTML")
 
             def sent(j: JobState) -> None:
                 j.telegram.preview_sent = j.telegram.file_sent = True

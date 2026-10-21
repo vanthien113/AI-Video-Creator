@@ -39,7 +39,7 @@ def run_fetch_product(ctx: JobContext) -> None:
             try:
                 ctx.report(0.1, "Mở trang sản phẩm TikTok")
                 product = read_product_page(page, source.url)
-                ctx.log(f"fetch: {product.url} title={product.title!r} images={len(product.image_urls)}")
+                ctx.log(f"fetch: {product.url} title={product.title!r} shop={product.shop!r} images={len(product.image_urls)}")
                 ctx.report(0.6, f"Tải {len(product.image_urls)} ảnh sản phẩm")
                 names = download_images(page.request, product.image_urls, candidates_dir, should_stop=ctx.is_cancelled)
             except (SourceError, PlaywrightError) as exc:
@@ -58,6 +58,7 @@ def run_fetch_product(ctx: JobContext) -> None:
 
     def save(j: JobState) -> None:
         j.source.title, j.source.description, j.source.candidates = product.title, product.description, names
+        j.source.shop = product.shop
         j.source.product_id = product_id_from_url(product.url) or product_id_from_url(j.source.url)
         j.product_info = "\n".join(p for p in (product.title, product.description) if p)[:MAX_PRODUCT_INFO]
         if product.title:

@@ -5,7 +5,7 @@ import json
 import httpx
 import pytest
 
-from app.job_models import JobState, SourceInfo, TelegramOrigin
+from app.job_models import JobState, ShopeeListing, SourceInfo, TelegramOrigin
 from app.steps import send_telegram_step
 from app.steps.send_telegram_step import run_send_telegram
 from app.steps.step_types import StepFailure
@@ -62,6 +62,22 @@ def test_sends_the_exported_video_itself_then_bare_title_as_replies(telegram_job
     assert kind2 == "message" and title["text"] == "Son Kem Lì Velvet" and title["reply_to"] == 42  # copy-ready
     assert ctx.job.telegram.preview_sent and ctx.job.telegram.file_sent and ctx.job.telegram.title_sent
     assert not ctx.path("preview-1080p.mp4").exists()
+
+
+def test_shopee_link_is_one_short_tappable_line(telegram_job):
+    ctx, api = telegram_job
+    ctx.job.shopee = ShopeeListing(url="https://shopee.vn/product/1/2?a=1&b=2", shop="Xuka <shop>")
+    run_send_telegram(ctx)
+    video = api.calls[0][1]
+    assert video["parse_mode"] == "HTML"
+    assert video["caption"] == f'{URL}\n<a href="https://shopee.vn/product/1/2?a=1&amp;b=2">🛒 Shopee: Xuka &lt;shop&gt;</a>'
+
+
+def test_an_unchecked_shopee_result_is_marked(telegram_job):
+    ctx, api = telegram_job
+    ctx.job.shopee = ShopeeListing(url="https://shopee.vn/product/1/2", checked=False)
+    run_send_telegram(ctx)
+    assert api.calls[0][1]["caption"].endswith('<a href="https://shopee.vn/product/1/2">🛒 Shopee ⚠️ chưa kiểm tra shop</a>')
 
 
 def test_no_title_message_without_a_product_title(telegram_job):
@@ -125,6 +141,9 @@ def test_api_sends_reply_and_never_leaks_token(tmp_path):
     assert json.loads(json.loads(seen[0].content)["reply_parameters"])["message_id"] == 9
     api.send_video(5, clip, "cap", reply_to=9)
     assert b'name="reply_parameters"' in seen[1].content and b'name="video"; filename="v.mp4"' in seen[1].content
+    assert b'name="parse_mode"' not in seen[1].content  # plain text unless asked
+    api.send_video(5, clip, "<b>cap</b>", parse_mode="HTML")
+    assert b'name="parse_mode"\r\n\r\nHTML' in seen[2].content
     with pytest.raises(TelegramApiError) as err:
         api.send_document(5, clip, "cap")
     assert "Too Large" in str(err.value) and token not in str(err.value)

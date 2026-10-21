@@ -51,11 +51,12 @@ export interface FlowStatus {
 
 export const STEPS = [
   "fetch_source", "cutout", "upscale", "prompt", "flow_generate", "flow_download", "enhance", "export", "hashtags",
-  "send_telegram", "tiktok_draft", "tiktok_post",
+  "shopee", "send_telegram", "tiktok_draft", "tiktok_post",
 ];
-/** Only link jobs read TikTok, only Telegram jobs send the result back, and posting shows once asked for. */
+/** Only link jobs read TikTok and look on Shopee, only Telegram jobs send the result back, and posting shows
+ * once asked for. */
 export const stepsFor = (job: Job) =>
-  STEPS.filter((s) => (s !== "fetch_source" || job.source) && (s !== "send_telegram" || job.telegram)
+  STEPS.filter((s) => (s !== "fetch_source" && s !== "shopee" || job.source) && (s !== "send_telegram" || job.telegram)
     && (s !== "tiktok_post" || job.post.mode));
 export const STEP_LABELS: Record<string, string> = {
   fetch_source: "Đọc TikTok",
@@ -67,6 +68,7 @@ export const STEP_LABELS: Record<string, string> = {
   enhance: "Nâng 60fps",
   export: "Xuất file",
   hashtags: "Hashtag",
+  shopee: "Tìm Shopee",
   send_telegram: "Gửi Telegram",
   tiktok_draft: "Lưu nháp TikTok",
   tiktok_post: "Đăng TikTok",

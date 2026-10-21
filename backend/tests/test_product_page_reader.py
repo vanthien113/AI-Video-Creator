@@ -10,7 +10,7 @@ from PIL import Image
 from app.flow.chrome_launcher import cdp_tabs
 from app.job_models import JobState, SourceInfo
 from app.sources.product_page_reader import (
-    blocked_reason, clean_title, host_is_trusted, image_key, is_public_image_url, pick_image_urls,
+    blocked_reason, clean_title, host_is_trusted, image_key, is_public_image_url, pick_image_urls, shop_name,
 )
 from app.steps.fetch_product_step import run_fetch_product
 
@@ -54,6 +54,12 @@ def test_only_public_https_images_and_tiktok_pages():
     assert not host_is_trusted("https://evil-tiktok.com/x") and not host_is_trusted("https://tiktok.com.evil.io/")
 
 
+@pytest.mark.parametrize("lines,shop", [(["Sold by LOURA"], "LOURA"), (["Được bán bởi  Giày Xinh Shoes "], "Giày Xinh Shoes"),
+                                        (["149 sold"], ""), ([], "")])
+def test_shop_name_from_the_sold_by_line(lines, shop):
+    assert shop_name(lines) == shop
+
+
 def test_clean_title():
     assert clean_title("Son Kem Lì Black Rouge | TikTok Shop") == "Son Kem Lì Black Rouge"
 
@@ -63,7 +69,8 @@ FIXTURE = """<!doctype html><html><head><meta charset="utf-8">
 <meta property="og:description" content="SPF50+ PA++++, 50ml">
 <meta property="og:image" content="/main.jpg">
 </head><body><h1>Kem Chống Nắng XYZ</h1>
-<img src="/main.jpg"><img src="/side.jpg"><img src="/icon.jpg"></body></html>"""
+<img src="/main.jpg"><img src="/side.jpg"><img src="/icon.jpg">
+<div>Sold by XYZ Beauty Store</div></body></html>"""
 
 
 @pytest.fixture
@@ -95,6 +102,7 @@ def test_fetch_step_on_local_fixture_with_real_chrome(make_context, fixture_site
     assert saved.source.candidates == ["01.jpg", "02.jpg"]  # og image first, icon dropped
     assert saved.product_info.startswith("Kem Chống Nắng XYZ\nSPF50+")
     assert saved.name == "kem-chong-nang-xyz"
+    assert saved.source.shop == "XYZ Beauty Store"
     with Image.open(ctx.path("candidates/01.jpg")) as first:
         assert first.size == (900, 900)
 

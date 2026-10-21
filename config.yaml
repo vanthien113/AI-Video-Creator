@@ -68,6 +68,10 @@ tiktok:                      # sau khi xuất file: tải lên TikTok Studio và
   schedule_lead_min: 30      # khung giờ phải cách bây giờ ít nhất chừng này phút (TikTok cần ≥ 15 lúc bấm; tải lên + chờ kiểm tra mất vài phút)
   check_wait_min: 15         # chờ TikTok kiểm tra video (Content check lite, ~5–10 phút) xong rồi mới bấm Post/Schedule
 
+shopee:                      # tìm sản phẩm cùng mẫu trên Shopee từ ảnh chính (Google Lens), gửi link kèm video lên Telegram
+  enabled: true              # false = tắt nhanh chức năng này
+  max_candidates: 3          # số trang sản phẩm Shopee đọc mỗi video; Shopee hay bắt xác minh chống bot nếu mở nhiều (bị bắt thì gửi kết quả đầu của Google, kèm ⚠️ chưa kiểm tra)
+
 logo:                        # đè logo của bạn lên dấu ✦ của Flow (góc dưới phải) khi xuất video
   enabled: true              # false = giữ nguyên video như Flow trả về
   file: assets/logo.png      # PNG nền trong suốt

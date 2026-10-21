@@ -10,10 +10,11 @@ from pydantic import BaseModel, Field
 # "send_telegram" only does work for jobs that came from Telegram; for the others it is a no-op.
 # "tiktok_draft" saves the video as a TikTok Studio draft (never posts) when tiktok.save_draft is on.
 # "hashtags" asks Google's AI Mode (Claude as fallback) for 3 hashtags; it never fails the job.
+# "shopee" looks for the product on Shopee from the main photo (shopee.enabled); it never fails the job.
 # "tiktok_post" posts or schedules the video on TikTok, only after the user pressed Đăng ngay / Lên lịch;
 # until then it only sends those two buttons to Telegram.
 STEPS = ["fetch_source", "cutout", "upscale", "prompt", "flow_generate", "flow_download", "enhance", "export",
-         "hashtags", "send_telegram", "tiktok_draft", "tiktok_post"]
+         "hashtags", "shopee", "send_telegram", "tiktok_draft", "tiktok_post"]
 FIRST_UPLOAD_STEP = "cutout"
 
 # A gate pauses the job right after the step it is keyed by.
@@ -50,6 +51,18 @@ class SourceInfo(BaseModel):
     description: str = ""
     candidates: list[str] = Field(default_factory=list)  # file names in <job>/candidates/
     product_id: str = ""  # from the page address after redirects; short vt.tiktok.com links carry none
+    shop: str = ""  # the "Sold by ..." line: the same shop is the Shopee result to prefer
+
+
+class ShopeeListing(BaseModel):
+    """The Shopee product sent with the video: the TikTok shop's own listing if found, else the best seller.
+    checked=False: no Shopee page would open, so this is just Google Lens's first result."""
+
+    url: str
+    shop: str = ""
+    sold: int = 0
+    rating: float = 0.0
+    checked: bool = True
 
 
 class TelegramOrigin(BaseModel):
@@ -121,6 +134,7 @@ class JobState(BaseModel):
     hashtags: list[str] = Field(default_factory=list)  # sent after the title on Telegram
     hashtags_source: str = ""  # "google" | "claude" | "" (none found)
     hashtags_verified: bool = False  # each one checked on TikTok (exists, enough videos)
+    shopee: ShopeeListing | None = None
     status_message: TelegramMessageRef | None = None  # the one Telegram message edited as the job moves on
     tiktok: TikTokDraftState = Field(default_factory=TikTokDraftState)
     post: TikTokPostState = Field(default_factory=TikTokPostState)

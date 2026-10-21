@@ -8,6 +8,7 @@ from .hashtags_step import run_hashtags
 from .flow_steps import run_flow_download, run_flow_generate
 from .prompt_step import run_prompt
 from .send_telegram_step import run_send_telegram
+from .shopee_step import run_shopee
 from .step_types import StepFn
 from .tiktok_draft_step import run_tiktok_draft
 from .tiktok_post_step import run_tiktok_post
@@ -25,6 +26,7 @@ def build_steps() -> dict[str, StepFn]:
         "enhance": run_enhance,
         "export": run_export,
         "hashtags": run_hashtags,
+        "shopee": run_shopee,
         "send_telegram": run_send_telegram,
         "tiktok_draft": run_tiktok_draft,
         "tiktok_post": run_tiktok_post,
