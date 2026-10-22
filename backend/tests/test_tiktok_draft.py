@@ -51,6 +51,10 @@ def test_description_is_the_product_title_from_the_link():
     assert draft_description(JobState(id="t", name="son-moi", input_file="a.png", created_at="t")) == "son-moi"
 
 
+def test_description_is_claude_caption_when_there_is_one():
+    assert draft_description(job(caption="Búp bê nơ mà nhẹ tênh 🎀")) == "Búp bê nơ mà nhẹ tênh 🎀"
+
+
 def test_notify_replies_to_the_link_message_or_messages_the_owner(monkeypatch):
     monkeypatch.delenv("TELEGRAM_ALLOWED_USER_IDS", raising=False)
     owner = TelegramConfig(allowed_user_ids=[111222333])

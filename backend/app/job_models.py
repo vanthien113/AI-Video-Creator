@@ -131,6 +131,7 @@ class JobState(BaseModel):
     product_info: str = ""  # title + description from the product page, editable at the pick gate
     source: SourceInfo | None = None
     telegram: TelegramOrigin | None = None
+    caption: str = ""  # post text Claude wrote at the prompt step; "" = older job, the product title is used
     hashtags: list[str] = Field(default_factory=list)  # sent after the title on Telegram
     hashtags_source: str = ""  # "google" | "claude" | "" (none found)
     hashtags_verified: bool = False  # each one checked on TikTok (exists, enough videos)

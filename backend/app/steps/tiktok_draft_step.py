@@ -10,6 +10,7 @@ from ..flow.cdp_connection import BrowserNotRunning, browser_context, capture_pa
 from ..job_models import JobState, now_iso
 from ..telegram.telegram_api import TelegramApi, TelegramApiError
 from ..telegram.telegram_notify import notify_target
+from ..tiktok.post_plan import post_title
 from ..tiktok.studio_upload import StudioError, save_draft
 from .step_types import JobContext, StepFailure
 
@@ -19,7 +20,7 @@ def make_api(token: str) -> TelegramApi:  # replaced in tests
 
 
 def draft_description(job: JobState) -> str:
-    return (job.source.title if job.source else "") or job.name
+    return post_title(job)
 
 
 def save_draft_in_browser(ctx: JobContext, video: Path, description: str) -> None:  # replaced in tests

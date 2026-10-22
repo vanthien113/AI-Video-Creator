@@ -91,7 +91,13 @@ def test_parse_claude_output_rejects(stdout):
 def test_parse_stream_json_takes_final_result_line():
     lines = "\n".join([json.dumps({"type": "system"}), json.dumps({"type": "assistant"}),
                         envelope('{"prompt": "P", "summary": "S"}')])
-    assert parse_claude_output(lines) == {"prompt": "P", "summary": "S", "product_type": ""}
+    assert parse_claude_output(lines) == {"prompt": "P", "summary": "S", "product_type": "", "caption": ""}
+
+
+def test_caption_is_one_line_without_hashtags():
+    """The tool appends its own checked hashtags, so any Claude adds would be posted twice."""
+    result = '{"prompt": "P", "summary": "S", "caption": "Dép trắng  mà dơ\\nxả nước là sạch 🫧 #depnu #deptoong"}'
+    assert parse_claude_output(envelope(result))["caption"] == "Dép trắng mà dơ xả nước là sạch 🫧"
 
 
 def test_claude_gets_no_tools_and_page_text_is_fenced():

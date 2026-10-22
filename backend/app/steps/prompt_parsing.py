@@ -1,6 +1,9 @@
-"""Turn `claude -p --output-format json` output into {prompt, summary}."""
+"""Turn `claude -p --output-format json` output into {prompt, summary, product_type, caption}."""
 
 import json
+import re
+
+HASHTAG = re.compile(r"#\S+")  # the hashtags step adds its own checked ones after the caption
 
 
 class PromptParseError(ValueError):
@@ -72,4 +75,6 @@ def parse_claude_output(stdout: str) -> dict[str, str]:
         summary = ""
     product_type = data.get("product_type")
     product_type = " ".join(product_type.split()).lower() if isinstance(product_type, str) else ""
-    return {"prompt": prompt.strip(), "summary": summary.strip(), "product_type": product_type}
+    caption = data.get("caption")
+    caption = " ".join(HASHTAG.sub(" ", caption).split()) if isinstance(caption, str) else ""
+    return {"prompt": prompt.strip(), "summary": summary.strip(), "product_type": product_type, "caption": caption}

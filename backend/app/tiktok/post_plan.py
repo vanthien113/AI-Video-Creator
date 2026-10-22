@@ -24,7 +24,8 @@ def job_product_id(job: JobState) -> str:
 
 
 def post_title(job: JobState) -> str:
-    return ((job.source.title if job.source else "") or job.name).strip()
+    """Claude's caption; jobs from before captions fall back to the shop's product title."""
+    return (job.caption or (job.source.title if job.source else "") or job.name).strip()
 
 
 def next_slot(now: datetime, slots: list[int], lead_min: int, taken: Iterable[datetime | None]) -> datetime:

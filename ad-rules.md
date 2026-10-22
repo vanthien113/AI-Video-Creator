@@ -70,3 +70,14 @@ Số liệu giữ chân người xem của shop: mất 1/3 người xem ở giâ
 
 ## Phần tóm tắt cho người duyệt
 - Câu đầu tiên của `summary` là: `Hook: "<câu hook>"`. Sau đó 2–3 câu tiếng Việt giải thích ý tưởng, nêu rõ khung đầu tiên là gì và khung cuối là gì.
+
+## Caption bài đăng (`caption`)
+Caption được copy nguyên văn để đăng kèm video. Tool tự thêm hashtag phía sau.
+- Tiếng Việt có dấu, viết như người thật nhắn tin: 1–2 câu, tối đa 150 ký tự. Viết hoa đúng chính tả như câu bình thường: hoa chữ đầu câu và tên riêng (EVA, PU…). Không Viết Hoa Mỗi Chữ như tên sản phẩm, không VIẾT HOA CẢ CÂU.
+- Câu đầu cùng ý với câu hook trong video (viết gọn lại được, không cần chép nguyên văn), để người đọc thấy khớp với video đang xem.
+- Câu sau nêu 1–2 điểm đáng tiền nhất có trong thông tin sản phẩm (chất liệu, đế, độ cao, tính năng), kèm lưu ý size nếu trang sản phẩm có (ví dụ "size 35–40", "chân bè lùi 1 size"). Có thể kết bằng một câu hỏi ngắn mời bình luận.
+- Gọi đúng loại sản phẩm theo cách người mua hay tìm và đúng với sản phẩm trong ảnh (ví dụ "dép tổ ong độn đế", "giày búp bê đế bệt").
+- Tối đa 1 emoji, hợp với sản phẩm.
+- Chỉ dùng thông tin có trong thông tin sản phẩm hoặc nhìn thấy trong ảnh.
+- Không có: hashtag, giá, khuyến mãi, "deal", "sale", mã hàng hay mã mẫu, tên shop, tên thương hiệu, năm ("2024", "mới về 2026"), từ phóng đại hoặc cam kết ("bán chạy", "hot", "hot trend", "siêu phẩm", "đảm bảo", "rẻ nhất", "số 1"), lời kêu gọi bấm link hay giỏ hàng, tên ứng dụng hay nền tảng.
+- Không chép lại tên sản phẩm trên trang shop.

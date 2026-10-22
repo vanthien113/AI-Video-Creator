@@ -89,6 +89,12 @@ def test_post_title_and_step_order():
     assert STEPS[-2:] == ["tiktok_draft", "tiktok_post"]
 
 
+def test_post_title_is_claude_caption_not_the_shop_listing_name():
+    shop = SourceInfo(url="u", title="Dép Tổ Ong Nữ Cao Cấp Đế Độn 5cm ABABAS Nguyên Khôi EVA 2546")
+    assert post_title(job(source=shop, caption="Dép trắng mà dơ xả nước là sạch 🫧")) == \
+        "Dép trắng mà dơ xả nước là sạch 🫧"
+
+
 def test_tiktok_config_defaults_and_checks():
     cfg = TikTokConfig()
     assert cfg.schedule_slots == SLOTS and cfg.schedule_lead_min == 30 and cfg.check_wait_min == 15

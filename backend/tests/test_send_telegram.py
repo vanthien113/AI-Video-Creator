@@ -80,6 +80,13 @@ def test_an_unchecked_shopee_result_is_marked(telegram_job):
     assert api.calls[0][1]["caption"].endswith('<a href="https://shopee.vn/product/1/2">🛒 Shopee ⚠️ chưa kiểm tra shop</a>')
 
 
+def test_copy_message_is_claude_caption_then_hashtags(telegram_job):
+    ctx, api = telegram_job
+    ctx.job.caption, ctx.job.hashtags, ctx.job.hashtags_verified = "Son lì mà mềm môi 💄", ["#son", "#sonli"], True
+    run_send_telegram(ctx)
+    assert api.calls[-1][1]["text"] == "Son lì mà mềm môi 💄\n#son #sonli"  # not the shop's "Son Kem Lì Velvet"
+
+
 def test_no_title_message_without_a_product_title(telegram_job):
     ctx, api = telegram_job
     ctx.job.source = None

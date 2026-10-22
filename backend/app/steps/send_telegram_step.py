@@ -1,5 +1,6 @@
 """Reply in Telegram with the finished video itself (nothing re-encoded), or a note saying where it is on the
-Mac if it is over the 50MB bot limit, then the bare product title (a message of its own, so it is easy to copy).
+Mac if it is over the 50MB bot limit, then the post caption + hashtags (a message of its own, so it is easy to
+copy). The caption is Claude's; older jobs without one get the bare product title.
 
 Only jobs that came from Telegram do anything here. Each part is marked as sent once delivered,
 so "Thử lại" after a network error never posts the same video twice.
@@ -76,7 +77,7 @@ def run_send_telegram(ctx: JobContext) -> None:
                                                  f"Telegram — nằm trên Mac tại:\n{where}", reply_to=origin.message_id)
             ctx.update_job(lambda j: setattr(j.telegram, "file_sent", True))
 
-        title = ctx.job.source.title if ctx.job.source else ""
+        title = ctx.job.caption or (ctx.job.source.title if ctx.job.source else "")
         if title and not origin.title_sent:
             tags = " ".join(ctx.job.hashtags) + ("" if ctx.job.hashtags_verified else " (chưa xác minh)")
             text = f"{title}\n{tags}" if ctx.job.hashtags else title
