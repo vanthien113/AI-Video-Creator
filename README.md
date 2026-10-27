@@ -1,4 +1,4 @@
-# AI Video Creator
+# Affiliate AI Video Creator
 
 Gửi một link sản phẩm TikTok Shop từ điện thoại, nhận lại clip quảng cáo dọc 9:16, 2K 60fps, có người mẫu dùng sản phẩm và câu hook mở đầu. Mọi bước xử lý ảnh và video chạy trên máy Mac; chỉ phần viết prompt (Claude Code) và sinh video (Google Flow) dùng dịch vụ bên ngoài.
 
