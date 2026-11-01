@@ -35,6 +35,7 @@ Số liệu giữ chân người xem của shop: mất 1/3 người xem ở giâ
 - Câu chốt mời bình luận một cách tự nhiên, ví dụ hỏi người xem chọn màu nào hay mang size mấy. Không nói giá, khuyến mãi, giỏ hàng hay link.
 
 ## Người và sản phẩm
+- Có một người mẫu đang mang sản phẩm: nữ người Việt 20 tuổi, chân thon, da sáng. Viết rõ: "a youthful 20-year-old Vietnamese woman".
 - Có một người mẫu đang dùng sản phẩm: mang, mặc, bôi, cầm, mở hộp… tuỳ loại sản phẩm.
 - Không bịa trải nghiệm cá nhân ("tôi dùng cả tháng rồi"), công dụng y tế hay thông số không có trong thông tin sản phẩm.
 - Sản phẩm luôn rõ nét, đúng như ảnh. Viết rõ: "keep the product's exact shape, colors, logo and printed text unchanged".
