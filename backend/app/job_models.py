@@ -65,11 +65,19 @@ class ShopeeListing(BaseModel):
     checked: bool = True
 
 
+class TelegramMessageRef(BaseModel):
+    chat_id: int
+    message_id: int
+
+
 class TelegramOrigin(BaseModel):
     """Where a link came from, so the finished video can be sent back as a reply."""
 
     chat_id: int
     message_id: int | None = None
+    thread_id: int | None = None  # the job's own topic when the bot has topics on; then nothing is a reply
+    # Channel mode: the job's channel post as copied into the discussion group; replies to it are its comments.
+    comments: TelegramMessageRef | None = None
     preview_sent: bool = False  # parts already delivered: a retry never sends duplicates
     file_sent: bool = False
     title_sent: bool = False
@@ -78,10 +86,14 @@ class TelegramOrigin(BaseModel):
     pick_message_id: int | None = None
     pick_selection: list[str] = Field(default_factory=list)  # candidate file names, main image first
 
-
-class TelegramMessageRef(BaseModel):
-    chat_id: int
-    message_id: int
+    def target(self) -> tuple[int, dict]:
+        """(chat id, send kwargs) for every message of this job: the comments under its channel post, its topic,
+        or a reply under the link."""
+        if self.comments:
+            return self.comments.chat_id, {"reply_to": self.comments.message_id}
+        if self.thread_id:
+            return self.chat_id, {"thread_id": self.thread_id}
+        return self.chat_id, {"reply_to": self.message_id}
 
 
 class TikTokDraftState(BaseModel):

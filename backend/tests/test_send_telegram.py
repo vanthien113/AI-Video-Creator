@@ -5,7 +5,7 @@ import json
 import httpx
 import pytest
 
-from app.job_models import JobState, ShopeeListing, SourceInfo, TelegramOrigin
+from app.job_models import JobState, ShopeeListing, SourceInfo, TelegramMessageRef, TelegramOrigin
 from app.steps import send_telegram_step
 from app.steps.send_telegram_step import run_send_telegram
 from app.steps.step_types import StepFailure
@@ -29,11 +29,11 @@ class FakeApi:
         assert path.exists() and path.stat().st_size > 0
         self._record("video", chat_id=chat_id, caption=caption, reply_to=reply_to, name=path.name, **kw)
 
-    def send_document(self, chat_id, path, caption, reply_to=None):
-        self._record("document", chat_id=chat_id, reply_to=reply_to, name=path.name)
+    def send_document(self, chat_id, path, caption, reply_to=None, thread_id=None):
+        self._record("document", chat_id=chat_id, reply_to=reply_to, thread_id=thread_id, name=path.name)
 
-    def send_message(self, chat_id, text, reply_to=None):
-        self._record("message", chat_id=chat_id, text=text, reply_to=reply_to)
+    def send_message(self, chat_id, text, reply_to=None, thread_id=None):
+        self._record("message", chat_id=chat_id, text=text, reply_to=reply_to, thread_id=thread_id)
 
 
 @pytest.fixture
@@ -62,6 +62,18 @@ def test_sends_the_exported_video_itself_then_bare_title_as_replies(telegram_job
     assert kind2 == "message" and title["text"] == "Son Kem Lì Velvet" and title["reply_to"] == 42  # copy-ready
     assert ctx.job.telegram.preview_sent and ctx.job.telegram.file_sent and ctx.job.telegram.title_sent
     assert not ctx.path("preview-1080p.mp4").exists()
+
+
+@pytest.mark.parametrize("where, expected", [
+    ({"thread_id": 7}, (111, 7, None)),                                                  # the job's topic
+    ({"comments": TelegramMessageRef(chat_id=-100777, message_id=5)}, (-100777, None, 5)),  # under its channel post
+])
+def test_video_and_caption_go_where_the_jobs_messages_go(telegram_job, where, expected):
+    ctx, api = telegram_job
+    for field, value in where.items():
+        setattr(ctx.job.telegram, field, value)
+    run_send_telegram(ctx)
+    assert [(sent["chat_id"], sent.get("thread_id"), sent["reply_to"]) for _, sent in api.calls] == [expected] * 2
 
 
 def test_shopee_link_is_one_short_tappable_line(telegram_job):
@@ -154,3 +166,18 @@ def test_api_sends_reply_and_never_leaks_token(tmp_path):
     with pytest.raises(TelegramApiError) as err:
         api.send_document(5, clip, "cap")
     assert "Too Large" in str(err.value) and token not in str(err.value)
+
+
+def test_api_creates_a_topic_and_sends_into_it():
+    seen = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        seen.append(request)
+        result = {"message_thread_id": 77} if request.url.path.endswith("/createForumTopic") else {}
+        return httpx.Response(200, json={"ok": True, "result": result})
+
+    api = TelegramApi("1:T", httpx.Client(transport=httpx.MockTransport(handler)))
+    assert api.create_forum_topic(5, "⏳ Link TikTok mới") == 77
+    api.send_message(5, "hi", thread_id=77)
+    body = json.loads(seen[1].content)
+    assert body["message_thread_id"] == 77 and "reply_parameters" not in body

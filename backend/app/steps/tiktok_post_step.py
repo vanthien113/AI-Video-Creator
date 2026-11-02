@@ -240,9 +240,9 @@ def tell_telegram(ctx: JobContext, job: JobState) -> JobState:
         return job
     api = make_api(token)
     edit_offer(job, api, done_text(job))
-    chat_id, reply_to = target
+    chat_id, place = target
     try:
-        api.send_message(chat_id, result_message(job), reply_to=reply_to)
+        api.send_message(chat_id, result_message(job), **place)
     except TelegramApiError as exc:
         verb = "lên lịch" if job.post.mode == "schedule" else "đăng"
         raise StepFailure(f"Đã {verb} TikTok nhưng nhắn Telegram lỗi: {exc}. Bấm 'Thử lại' để nhắn lại.") from exc

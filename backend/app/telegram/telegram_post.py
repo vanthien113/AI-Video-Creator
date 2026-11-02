@@ -57,17 +57,18 @@ def state_text(job: JobState) -> str:
 
 
 def send_offer(job: JobState, api, update_job: Callable) -> JobState:
-    """Bot jobs with a product ID get the two buttons under their link message, once."""
+    """Bot jobs with a product ID get the two buttons where their messages go, once."""
     origin = job.telegram
     if not origin or job.post.offer_message or job.post.mode or not job_product_id(job):
         return job
     token = secrets.token_hex(4)
-    message_id = api.send_message(origin.chat_id, OFFER_TEXT, reply_to=origin.message_id, reply_markup=keyboard(token))
+    chat_id, place = origin.target()
+    message_id = api.send_message(chat_id, OFFER_TEXT, **place, reply_markup=keyboard(token))
 
     def remember(j: JobState) -> None:
         j.post.offer_token = token
         if message_id:
-            j.post.offer_message = TelegramMessageRef(chat_id=origin.chat_id, message_id=message_id)
+            j.post.offer_message = TelegramMessageRef(chat_id=chat_id, message_id=message_id)
 
     return update_job(remember)
 

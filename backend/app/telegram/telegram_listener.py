@@ -16,11 +16,15 @@ logging.getLogger("httpx").setLevel(logging.WARNING)  # INFO logs would print th
 class TelegramListener:
     def __init__(self, api: TelegramApi, token: str, allowed_ids: list[int],
                  on_link: Callable[[str, int, int], bool], offset_file: Path,
-                 on_callback: Callable[[dict], str | None] | None = None):
+                 on_callback: Callable[[dict], str | None] | None = None,
+                 on_channel_copy: Callable[[int, int, int, int], None] | None = None, private_only: bool = False):
         """`on_link(url, chat_id, message_id)` queues a job; False means the link was a duplicate.
-        `on_callback(callback_query)` handles a button tap and returns the toast text."""
+        `on_callback(callback_query)` handles a button tap and returns the toast text.
+        `on_channel_copy(channel_id, post_id, chat_id, message_id)`: a channel post was copied into its discussion
+        group. `private_only` ignores group messages, e.g. people commenting under the channel posts."""
         self.api, self.token, self.allowed = api, token, set(allowed_ids)
         self.on_link, self.offset_file, self.on_callback = on_link, offset_file, on_callback
+        self.on_channel_copy, self.private_only = on_channel_copy, private_only
         self.state, self.message = "starting", ""
         self._stop = threading.Event()
 
@@ -66,13 +70,24 @@ class TelegramListener:
         message = update.get("message")
         if not message:
             return
+        if message.get("is_automatic_forward"):
+            self._handle_channel_copy(message)
+            return
+        if self.private_only and message["chat"].get("type") != "private":
+            return
         chat_id, message_id = message["chat"]["id"], message.get("message_id")
+        thread_id = message.get("message_thread_id") if message.get("is_topic_message") else None
         reply = handle_message(message, self.allowed, lambda url: self.on_link(url, chat_id, message_id))
         if reply:
             try:
-                self.api.send_message(chat_id, reply)
+                self.api.send_message(chat_id, reply, thread_id=thread_id)  # in the topic it was asked from
             except Exception:
                 pass  # the link is already queued; a lost reply is harmless
+
+    def _handle_channel_copy(self, message: dict) -> None:
+        origin = message.get("forward_origin") or {}
+        if self.on_channel_copy and origin.get("type") == "channel":
+            self.on_channel_copy(origin["chat"]["id"], origin["message_id"], message["chat"]["id"], message["message_id"])
 
     def _handle_tap(self, callback: dict) -> None:
         user_id = (callback.get("from") or {}).get("id")

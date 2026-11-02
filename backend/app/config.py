@@ -127,6 +127,13 @@ class TelegramConfig(BaseModel):
         from_env = [int(x) for x in os.environ.get("TELEGRAM_ALLOWED_USER_IDS", "").replace(",", " ").split() if x.isdigit()]
         return list(dict.fromkeys([*self.allowed_user_ids, *from_env]))
 
+    @property
+    def channel_id(self) -> int | None:
+        """TELEGRAM_CHANNEL_ID from .env (one bot and channel per machine): each bot job becomes a post on this
+        channel and the rest of its messages are that post's comments."""
+        value = os.environ.get("TELEGRAM_CHANNEL_ID", "").strip()
+        return int(value) if value.lstrip("-").isdigit() else None
+
 
 class TikTokConfig(BaseModel):
     save_draft: bool = True  # after export: upload to TikTok Studio and Save draft (never Post)

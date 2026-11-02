@@ -70,7 +70,7 @@ def make_collage(paths: list[Path], out: Path) -> Path:
 # ---- Telegram side --------------------------------------------------------------
 
 def send_picker(ctx, api) -> None:
-    """At the pick gate: send the collage + buttons as a reply under the link message."""
+    """At the pick gate: send the collage + buttons where the job's messages go (JobState.telegram.target)."""
     job, origin = ctx.job, ctx.job.telegram
     names = job.source.candidates
     collage = make_collage([ctx.path("candidates") / n for n in names], ctx.path("candidates-collage.jpg"))
@@ -78,7 +78,8 @@ def send_picker(ctx, api) -> None:
     limit = ctx.config.flow.max_ingredients
     caption = (f"{job.source.title or 'Sản phẩm TikTok'}\n\nBấm số để chọn tối đa {limit} ảnh "
                "(ảnh bấm đầu là ảnh chính), rồi bấm Bắt đầu. Chọn trên giao diện tool cũng được.")
-    message_id = api.send_photo(origin.chat_id, collage, caption, reply_to=origin.message_id,
+    chat_id, place = origin.target()
+    message_id = api.send_photo(chat_id, collage, caption, **place,
                                 reply_markup=keyboard(names, [], token))
 
     def remember(j) -> None:

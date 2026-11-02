@@ -48,6 +48,7 @@ def run_send_telegram(ctx: JobContext) -> None:
     if not final.exists():
         raise StepFailure("Thiếu final-4k60.mp4, chạy lại bước nâng cấp video.")
     api = make_api(token)
+    chat_id, place = origin.target()
     size_name = output_label(ctx.config.video, final)
     fits = final.stat().st_size <= MAX_UPLOAD_BYTES
     file_sent = origin.file_sent  # ctx.job is not refreshed by update_job
@@ -56,7 +57,7 @@ def run_send_telegram(ctx: JobContext) -> None:
         if not origin.preview_sent and fits:  # the finished file itself plays in the chat, no second copy
             ctx.report(0.3, f"Gửi video {size_name} lên Telegram")
             info = probe_video(final)
-            api.send_video(origin.chat_id, upload_file(ctx, final), build_caption(ctx.job), reply_to=origin.message_id,
+            api.send_video(chat_id, upload_file(ctx, final), build_caption(ctx.job), **place,
                            width=info.width, height=info.height, duration=round(info.duration), parse_mode="HTML")
 
             def sent(j: JobState) -> None:
@@ -69,19 +70,19 @@ def run_send_telegram(ctx: JobContext) -> None:
             megabytes = final.stat().st_size / 1_000_000
             if fits:  # a job whose preview video went out before this run
                 ctx.report(0.75, f"Gửi file {size_name} ({megabytes:.0f}MB)")
-                api.send_document(origin.chat_id, upload_file(ctx, final),
-                                  f"File {size_name} {ctx.config.video.fps}fps gốc", reply_to=origin.message_id)
+                api.send_document(chat_id, upload_file(ctx, final),
+                                  f"File {size_name} {ctx.config.video.fps}fps gốc", **place)
             else:
                 where = ctx.job.export_path or str(final)
-                api.send_message(origin.chat_id, f"File {size_name} nặng {megabytes:.0f}MB, vượt giới hạn 50MB của "
-                                                 f"Telegram — nằm trên Mac tại:\n{where}", reply_to=origin.message_id)
+                api.send_message(chat_id, f"File {size_name} nặng {megabytes:.0f}MB, vượt giới hạn 50MB của "
+                                          f"Telegram — nằm trên Mac tại:\n{where}", **place)
             ctx.update_job(lambda j: setattr(j.telegram, "file_sent", True))
 
         title = ctx.job.caption or (ctx.job.source.title if ctx.job.source else "")
         if title and not origin.title_sent:
             tags = " ".join(ctx.job.hashtags) + ("" if ctx.job.hashtags_verified else " (chưa xác minh)")
             text = f"{title}\n{tags}" if ctx.job.hashtags else title
-            api.send_message(origin.chat_id, text, reply_to=origin.message_id)  # title + hashtags only: easy to copy
+            api.send_message(chat_id, text, **place)  # title + hashtags only: easy to copy
             ctx.update_job(lambda j: setattr(j.telegram, "title_sent", True))
     except TelegramApiError as exc:
         raise StepFailure(f"Gửi Telegram lỗi: {exc}. Video đã xuất trên Mac; bấm 'Thử lại' để gửi lại.") from exc

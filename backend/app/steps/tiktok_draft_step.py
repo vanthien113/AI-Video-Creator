@@ -58,11 +58,11 @@ def run_tiktok_draft(ctx: JobContext) -> None:
     if ctx.job.tiktok.notified or not target or not token:
         ctx.report(1, "Đã lưu nháp TikTok")
         return
-    chat_id, reply_to = target
+    chat_id, place = target
     text = (f"✅ Đã lưu nháp TikTok: {draft_description(ctx.job)}\n📁 {video.name}\n"
             "Mở TikTok Studio → Bản nháp để xem lại rồi đăng.")
     try:
-        make_api(token).send_message(chat_id, text, reply_to=reply_to)
+        make_api(token).send_message(chat_id, text, **place)
     except TelegramApiError as exc:
         raise StepFailure(f"Đã lưu nháp TikTok nhưng nhắn Telegram lỗi: {exc}. Bấm 'Thử lại' để nhắn lại.") from exc
     ctx.update_job(lambda j: setattr(j.tiktok, "notified", True))

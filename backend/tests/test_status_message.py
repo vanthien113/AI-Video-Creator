@@ -3,7 +3,8 @@
 from app.config import TelegramConfig
 from app.job_models import JobError, JobState, JobStatus, SourceInfo, TelegramOrigin
 from app.steps.step_types import StepFailure
-from app.telegram.telegram_notify import StatusNotifier, status_text
+from app.telegram.telegram_api import TelegramApiError
+from app.telegram.telegram_notify import StatusNotifier, status_text, topic_name
 
 from .test_pipeline_runner import drain, new_job, rig  # noqa: F401  (fixture re-export)
 
@@ -12,11 +13,14 @@ OWNER = 111222333
 
 class FakeApi:
     def __init__(self):
-        self.sent, self.edits = [], []
+        self.sent, self.edits, self.topics = [], [], []
 
-    def send_message(self, chat_id, text, reply_to=None):
-        self.sent.append((chat_id, text, reply_to))
+    def send_message(self, chat_id, text, reply_to=None, thread_id=None):
+        self.sent.append((chat_id, text, reply_to, thread_id))
         return 500 + len(self.sent)
+
+    def edit_forum_topic(self, chat_id, thread_id, name):
+        self.topics.append((thread_id, name))
 
     def edit_text(self, chat_id, message_id, text):
         self.edits.append((message_id, text))
@@ -35,6 +39,13 @@ def test_status_text_is_the_product_and_one_short_line():
     failed = job(status=JobStatus.failed, error=JobError(step="enhance", reason="x"))
     assert status_text(failed).endswith("❌ Lỗi ở bước Nâng 60fps")
     assert status_text(job(status=JobStatus.cancelled)).endswith("⏹ Đã huỷ")
+
+
+def test_topic_name_is_the_status_icon_then_the_product_within_telegram_limit():
+    assert topic_name(job(status=JobStatus.done)) == "✅ Giày cao gót"
+    long = job(status=JobStatus.running, current_step="cutout")
+    long.source.title = "x" * 150
+    assert topic_name(long) == "⏳ " + "x" * 99 + "…"
 
 
 def test_one_message_edited_per_step_and_nothing_for_unchanged_text(rig, monkeypatch):
@@ -68,6 +79,60 @@ def test_bot_jobs_get_the_status_under_the_link(rig, monkeypatch):
     notifier.flush()
     assert api.sent[0][0] == 5 and api.sent[0][2] == 9
     assert api.edits[-1][1].endswith("❌ Lỗi ở bước Upscale")
+
+
+def test_topic_jobs_get_the_status_in_their_topic_renamed_only_when_the_icon_changes(rig, monkeypatch):
+    monkeypatch.setenv("TELEGRAM_BOT_TOKEN", "1:T")
+    store, runner, _, _, behaviour = rig
+    api = FakeApi()
+    notifier = StatusNotifier(runner.config, store, api_factory=lambda token: api, background=False)
+    runner.on_change = notifier
+    behaviour["upscale"] = StepFailure("hỏng")
+    j = new_job(store, {"cutout": True})
+    store.update(j.id, lambda s: setattr(s, "telegram", TelegramOrigin(chat_id=5, message_id=9, thread_id=7)))
+    drain(store, runner)
+    notifier.flush()
+    assert api.sent[0][0] == 5 and api.sent[0][2:] == (None, 7)  # in the topic, not quoting the link
+    assert [(thread, name.split(" ", 1)[0]) for thread, name in api.topics] == [(7, "⏳"), (7, "❌")]
+
+
+def test_channel_mode_posts_the_status_on_the_channel_and_edits_it(rig, monkeypatch):
+    monkeypatch.setenv("TELEGRAM_BOT_TOKEN", "1:T")
+    monkeypatch.setenv("TELEGRAM_CHANNEL_ID", "-100123")
+    store, runner, _, _, _ = rig
+    api = FakeApi()
+    notifier = StatusNotifier(runner.config, store, api_factory=lambda token: api, background=False)
+    runner.on_change = notifier
+    j = new_job(store, {"cutout": True, "prompt": True, "flow_video": True})
+    store.update(j.id, lambda s: setattr(s, "telegram", TelegramOrigin(chat_id=5, message_id=9)))
+    drain(store, runner)
+    notifier.flush()
+    assert [(chat, reply, thread) for chat, _, reply, thread in api.sent] == [(-100123, None, None)]  # one post
+    assert store.get(j.id).status_message.chat_id == -100123 and api.edits[-1][1].endswith("✅ Xong")
+
+
+def test_a_new_status_message_only_when_the_old_one_is_gone(rig, monkeypatch):
+    monkeypatch.setenv("TELEGRAM_BOT_TOKEN", "1:T")
+    store, runner, _, _, _ = rig
+
+    class EditFails(FakeApi):
+        error = "editMessageText: ConnectError"
+
+        def edit_text(self, chat_id, message_id, text):
+            raise TelegramApiError(self.error)
+
+    api = EditFails()
+    notifier = StatusNotifier(runner.config, store, api_factory=lambda token: api, background=False)
+    j = new_job(store)
+    store.update(j.id, lambda s: setattr(s, "telegram", TelegramOrigin(chat_id=5, message_id=9)))
+    notifier(store.get(j.id))
+    store.update(j.id, lambda s: setattr(s, "status", JobStatus.running))
+    notifier(store.get(j.id))
+    assert len(api.sent) == 1  # a network blip on the edit never posts a duplicate
+    api.error = "editMessageText: Bad Request: message to edit not found"
+    store.update(j.id, lambda s: setattr(s, "status", JobStatus.done))
+    notifier(store.get(j.id))
+    assert len(api.sent) == 2  # deleted: a fresh one
 
 
 def test_quiet_without_a_token_or_a_target(rig, monkeypatch):

@@ -6,7 +6,10 @@ import pytest
 from PIL import Image
 
 from app.job_actions import InvalidAction
-from app.job_models import JobStatus, TelegramOrigin
+from app.job_models import JobStatus, TelegramMessageRef, TelegramOrigin
+from app.telegram import telegram_setup
+from app.telegram.telegram_api import TelegramApiError
+from app.telegram.telegram_setup import channel_copy_handler, link_handler
 
 from .test_pipeline_runner import UPLOAD_STEPS, drain, new_job, rig  # noqa: F401  (fixture re-export)
 
@@ -88,6 +91,52 @@ def test_telegram_origin_is_kept_for_the_reply(rig):
     job = actions.create_from_link(URL, TelegramOrigin(chat_id=111, message_id=42))
     assert (job.telegram.chat_id, job.telegram.message_id) == (111, 42)
     assert actions.create_from_link(URL.replace("abc", "zzz")).telegram is None  # pasted in the UI
+
+
+class TopicApi:
+    def __init__(self, topics_on=True):
+        self.topics_on, self.created, self.sent = topics_on, [], []
+
+    def create_forum_topic(self, chat_id, name):
+        if not self.topics_on:
+            raise TelegramApiError("createForumTopic: Bad Request: the chat is not a forum")
+        self.created.append((chat_id, name))
+        return 70 + len(self.created)
+
+    def send_message(self, chat_id, text, thread_id=None):
+        self.sent.append((chat_id, text, thread_id))
+
+
+def test_each_telegram_link_gets_its_own_topic(rig):
+    _, _, actions, _, _ = rig
+    api = TopicApi()
+    on_link = link_handler(actions, api)
+    assert on_link(URL, 111, 42)
+    assert not on_link(URL, 111, 43)  # already queued: no second, empty topic
+    assert len(api.created) == 1 and api.sent == []  # the status message will be the topic's first message
+    assert actions.open_link_job(URL).telegram.target() == (111, {"thread_id": 71})
+
+
+def test_with_topics_off_the_job_replies_under_the_link(rig):
+    _, _, actions, _, _ = rig
+    assert link_handler(actions, TopicApi(topics_on=False))(URL, 111, 42)
+    assert actions.open_link_job(URL).telegram.target() == (111, {"reply_to": 42})
+
+
+def test_the_channel_posts_copy_is_where_the_jobs_comments_go(rig, monkeypatch):
+    store, _, actions, _, _ = rig
+    monkeypatch.setattr(telegram_setup, "COPY_WAIT_SEC", 0)
+    channel, group, api = -100123, -100777, TopicApi()
+    assert link_handler(actions, api, topics=False)(URL, 111, 42)
+    assert api.created == []  # channel mode: the post and its comments replace the topic
+    job = actions.open_link_job(URL)
+    store.update(job.id, lambda j: setattr(j, "status_message", TelegramMessageRef(chat_id=channel, message_id=9)))
+    on_copy = channel_copy_handler(store, channel)
+    on_copy(-100999, 9, group, 3)  # another channel's post
+    on_copy(channel, 8, group, 3)  # a post that is not this job's
+    assert store.get(job.id).telegram.target() == (111, {"reply_to": 42})
+    on_copy(channel, 9, group, 4)
+    assert store.get(job.id).telegram.target() == (group, {"reply_to": 4})
 
 
 def test_duplicate_link_ignored_until_finished(rig):
