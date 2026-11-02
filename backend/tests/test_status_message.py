@@ -32,7 +32,8 @@ def job(**kw) -> JobState:
 
 
 def test_status_text_is_the_product_and_one_short_line():
-    assert status_text(job(status=JobStatus.running, current_step="flow_generate")) == "🎬 Giày cao gót\n⏳ Đang: Flow sinh"
+    assert status_text(job(status=JobStatus.running, current_step="flow_generate")) == \
+        "🔗 u\n🎬 Giày cao gót\n⏳ Đang: Flow sinh"
     assert status_text(job(status=JobStatus.awaiting_review, gate="pick_image")).endswith("🖼 Chờ chọn ảnh")
     assert status_text(job(status=JobStatus.awaiting_review, gate="prompt")).endswith("⏸ Chờ duyệt: Prompt")
     assert status_text(job(status=JobStatus.done)).endswith("✅ Xong")
