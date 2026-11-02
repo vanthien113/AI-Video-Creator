@@ -72,6 +72,11 @@ Cài một lần:
 2. Chép `.env.example` thành `.env`, điền `TELEGRAM_BOT_TOKEN=<token>`, khởi động lại tool.
 3. Nhắn `/start` cho bot của bạn, bot trả lời ID Telegram của bạn. Điền vào `.env`: `TELEGRAM_ALLOWED_USER_IDS=<ID>` (nhiều ID cách nhau bằng dấu phẩy), rồi khởi động lại tool.
 4. Thanh trên cùng hiện **"Telegram đang nghe"** là xong. Từ giờ trong app TikTok, bấm Chia sẻ, chọn Telegram, gửi cho bot của bạn.
+5. (Tuỳ chọn, nên dùng) **Mỗi link một bài trên kênh, mọi tin khác là bình luận dưới bài**, giống thread trên Slack. Bài đăng là tên sản phẩm + tình trạng, tự sửa qua từng bước tới `✅ Xong` / `❌ Lỗi…`; bấm "Bình luận" dưới bài là thấy ảnh ghép để chọn, video, caption, nút Đăng. Cách bật (mỗi máy một bot thì mỗi máy một kênh):
+   - Tạo kênh riêng tư, vào cài đặt kênh → Thảo luận (Discussion), liên kết một nhóm mới (nhóm không bật Topics).
+   - Thêm bot làm admin ở kênh (quyền đăng và sửa bài) và ở nhóm thảo luận.
+   - Điền `TELEGRAM_CHANNEL_ID=-100…` vào `.env` rồi khởi động lại tool. Link vẫn gửi cho bot qua chat riêng; bot bỏ qua tin bạn viết trong nhóm thảo luận.
+6. (Tuỳ chọn, khi không dùng kênh) Bật chế độ topic cho bot trong @BotFather (Mini App → My bots → bot → Bot Settings → Threads Settings), hoặc gửi link trong một nhóm đã bật Topics có bot làm admin (quyền Manage Topics). Từ đó mỗi link có **một topic riêng**, giống thread trên Slack: tin đầu tiên trong topic là tên sản phẩm + tình trạng (tự cập nhật qua từng bước), sau đó là mọi tin khác của job (ảnh ghép, video, caption, nút Đăng). Tên topic đổi theo tình trạng, ví dụ `⏳ Áo khoác gió…` → `✅ Áo khoác gió…` hay `❌ …`, nên nhìn danh sách topic là biết job nào xong. Không bật thì bot trả lời ngay dưới tin gửi link như mô tả bên dưới.
 
 Bot chỉ nhận link từ những ID đã khai báo. Sau khi nhận link, tool đọc trang rồi gửi **một ảnh ghép đánh số các ảnh sản phẩm** ngay dưới tin của bạn, kèm hàng nút số. Bấm số để chọn hoặc bỏ chọn (tối đa `flow.max_ingredients` ảnh, ảnh bấm đầu là ảnh chính, nút hiện `✅3·chính`, `✅6·2`), rồi bấm **▶ Bắt đầu**: tool tự chạy đến khi xuất video. Chọn trên giao diện tool cũng được; bên nào chọn trước thì tính bên đó.
 

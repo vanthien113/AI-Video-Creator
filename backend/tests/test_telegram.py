@@ -52,7 +52,7 @@ class FakeApi:
         self.offsets.append(offset)
         return self.batches.pop(0) if self.batches else []
 
-    def send_message(self, chat_id, text):
+    def send_message(self, chat_id, text, thread_id=None):
         self.sent.append((chat_id, text))
 
 
@@ -69,6 +69,20 @@ def test_offset_survives_restart(tmp_path):
     api2 = FakeApi([])
     TelegramListener(api2, "tok", [ME], lambda u, c, m: True, offset_file).poll_once()
     assert api2.offsets == [42]  # restart resumes after the processed update
+
+
+def test_channel_post_copies_are_reported_and_group_chatter_is_ignored(tmp_path):
+    offset_file = tmp_path / "offset"
+    offset_file.write_text("0")
+    group = {"id": -100777, "type": "supergroup"}
+    copy = {"message_id": 4, "chat": group, "is_automatic_forward": True, "text": "🎬 Giày",
+            "forward_origin": {"type": "channel", "chat": {"id": -100123}, "message_id": 9}}
+    comment = {**msg("https://vt.tiktok.com/A/"), "chat": group}  # the owner writing under a post
+    api = FakeApi([[{"update_id": 1, "message": copy}, {"update_id": 2, "message": comment}]])
+    copies, links = [], []
+    TelegramListener(api, "tok", [ME], lambda *a: links.append(a) or True, offset_file,
+                     on_channel_copy=lambda *a: copies.append(a), private_only=True).poll_once()
+    assert copies == [(-100123, 9, -100777, 4)] and links == [] and api.sent == []
 
 
 def test_first_run_skips_backlog_instead_of_replaying(tmp_path):
@@ -91,7 +105,7 @@ def test_one_bad_update_does_not_block_the_rest(tmp_path):
         return True
 
     class FlakySend(FakeApi):
-        def send_message(self, chat_id, text):
+        def send_message(self, chat_id, text, thread_id=None):
             raise ConnectionError("telegram down")
 
     api = FlakySend([[{"update_id": 1, "message": msg("https://vt.tiktok.com/BAD/")},

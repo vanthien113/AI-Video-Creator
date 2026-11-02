@@ -84,6 +84,15 @@ def test_offer_goes_once_under_the_link_and_only_for_bot_jobs_with_a_product_id(
     assert len(api.sent) == 1
 
 
+def test_offer_under_a_channel_post_is_edited_in_the_discussion_group():
+    api = FakeApi()
+    comments = TelegramMessageRef(chat_id=-100777, message_id=5)
+    bot = job(telegram=TelegramOrigin(chat_id=CHAT, message_id=LINK_MSG, comments=comments))
+    send_offer(bot, api, updater(bot))
+    assert (api.sent[0]["chat_id"], api.sent[0]["reply_to"]) == (-100777, 5)
+    assert bot.post.offer_message.chat_id == -100777  # the later edits must find it there
+
+
 def test_send_message_can_carry_buttons():
     seen = []
     api = TelegramApi("1:T", httpx.Client(transport=httpx.MockTransport(

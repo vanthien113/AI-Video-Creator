@@ -27,8 +27,9 @@ class TelegramApi:
         return response.json().get("result", [])
 
     def send_message(self, chat_id: int, text: str, reply_to: int | None = None,
-                     reply_markup: dict | None = None) -> int | None:
-        data = {"chat_id": chat_id, "text": text, "disable_web_page_preview": True, **self._reply(reply_to)}
+                     reply_markup: dict | None = None, thread_id: int | None = None) -> int | None:
+        data = {"chat_id": chat_id, "text": text, "disable_web_page_preview": True,
+                **self._place(reply_to, thread_id)}
         if reply_markup:
             data["reply_markup"] = reply_markup
         body = self._call("sendMessage", data, as_json=True)
@@ -39,21 +40,23 @@ class TelegramApi:
                                        "disable_web_page_preview": True}, as_json=True)
 
     def send_video(self, chat_id: int, path: Path, caption: str, reply_to: int | None = None,
-                   width: int = 0, height: int = 0, duration: int = 0, parse_mode: str | None = None) -> None:
+                   width: int = 0, height: int = 0, duration: int = 0, parse_mode: str | None = None,
+                   thread_id: int | None = None) -> None:
         data = {"chat_id": chat_id, "caption": caption[:1024], "supports_streaming": "true",
-                "width": width, "height": height, "duration": duration, **self._reply(reply_to)}
+                "width": width, "height": height, "duration": duration, **self._place(reply_to, thread_id)}
         if parse_mode:
             data["parse_mode"] = parse_mode
         self._upload("sendVideo", "video", path, "video/mp4", data)
 
-    def send_document(self, chat_id: int, path: Path, caption: str, reply_to: int | None = None) -> None:
-        data = {"chat_id": chat_id, "caption": caption[:1024], **self._reply(reply_to)}
+    def send_document(self, chat_id: int, path: Path, caption: str, reply_to: int | None = None,
+                      thread_id: int | None = None) -> None:
+        data = {"chat_id": chat_id, "caption": caption[:1024], **self._place(reply_to, thread_id)}
         self._upload("sendDocument", "document", path, "video/mp4", data)
 
     def send_photo(self, chat_id: int, path: Path, caption: str, reply_to: int | None = None,
-                   reply_markup: dict | None = None) -> int:
+                   reply_markup: dict | None = None, thread_id: int | None = None) -> int:
         """Returns the message id, so the buttons under the photo can be edited later."""
-        data = {"chat_id": chat_id, "caption": caption[:1024], **self._reply(reply_to)}
+        data = {"chat_id": chat_id, "caption": caption[:1024], **self._place(reply_to, thread_id)}
         if reply_markup:
             data["reply_markup"] = json.dumps(reply_markup)
         mime = "image/png" if path.suffix.lower() == ".png" else "image/jpeg"
@@ -68,17 +71,27 @@ class TelegramApi:
         self._call("editMessageCaption", {"chat_id": chat_id, "message_id": message_id, "caption": caption[:1024]},
                    as_json=True)
 
+    def create_forum_topic(self, chat_id: int, name: str) -> int | None:
+        """Returns the new topic's thread id; fails when topics are off for the bot in this chat."""
+        body = self._call("createForumTopic", {"chat_id": chat_id, "name": name}, as_json=True)
+        return (body.get("result") or {}).get("message_thread_id")
+
+    def edit_forum_topic(self, chat_id: int, thread_id: int, name: str) -> None:
+        self._call("editForumTopic", {"chat_id": chat_id, "message_thread_id": thread_id, "name": name},
+                   as_json=True)
+
     def answer_callback(self, callback_id: str, text: str = "") -> None:
         """Stops the spinner on the tapped button; `text` shows as a short toast."""
         self._call("answerCallbackQuery", {"callback_query_id": callback_id, "text": text[:190]}, as_json=True)
 
     # ---- helpers ----------------------------------------------------------
     @staticmethod
-    def _reply(reply_to: int | None) -> dict:
-        if not reply_to:
-            return {}
-        # Still send if the original message was deleted.
-        return {"reply_parameters": json.dumps({"message_id": reply_to, "allow_sending_without_reply": True})}
+    def _place(reply_to: int | None, thread_id: int | None) -> dict:
+        place = {"message_thread_id": thread_id} if thread_id else {}
+        if reply_to:
+            # Still send if the original message was deleted.
+            place["reply_parameters"] = json.dumps({"message_id": reply_to, "allow_sending_without_reply": True})
+        return place
 
     def _upload(self, method: str, field: str, path: Path, mime: str, data: dict) -> dict:
         with open(path, "rb") as fh:

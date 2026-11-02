@@ -19,19 +19,23 @@ STEP_NAMES = {
 
 
 GATE_NAMES = {"cutout": "Ảnh tách nền", "prompt": "Prompt", "flow_video": "Video Flow"}
+TOPIC_TITLE_MAX = 100
 
 
-def notify_target(job: JobState, telegram: TelegramConfig) -> tuple[int, int | None] | None:
-    """Reply under the link message for bot jobs; otherwise message the first allowed user."""
+def notify_target(job: JobState, telegram: TelegramConfig) -> tuple[int, dict] | None:
+    """(chat id, send kwargs): a bot job's topic or link message; otherwise the first allowed user."""
     if job.telegram:
-        return job.telegram.chat_id, job.telegram.message_id
-    return (telegram.user_ids[0], None) if telegram.user_ids else None
+        return job.telegram.target()
+    return (telegram.user_ids[0], {}) if telegram.user_ids else None
+
+
+def job_title(job: JobState) -> str:
+    return (job.source.title if job.source else "") or job.name
 
 
 def failure_text(job: JobState) -> str:
     step = STEP_NAMES.get(job.error.step, job.error.step)
-    title = (job.source.title if job.source else "") or job.name
-    return (f"❌ Lỗi ở bước {step}: {job.error.reason}\n📦 {title}\n"
+    return (f"❌ Lỗi ở bước {step}: {job.error.reason}\n📦 {job_title(job)}\n"
             "Mở AI Video Creator để xem chi tiết, sửa rồi bấm Thử lại.")
 
 
@@ -39,12 +43,12 @@ def send_failure(telegram: TelegramConfig, job: JobState, job_dir: Path, api) ->
     target = notify_target(job, telegram)
     if not target or not job.error:
         return
-    chat_id, reply_to = target
+    chat_id, place = target
     shot = job_dir / job.error.screenshot if job.error.screenshot else None
     if shot and shot.exists():
-        api.send_photo(chat_id, shot, failure_text(job), reply_to=reply_to)
+        api.send_photo(chat_id, shot, failure_text(job), **place)
     else:
-        api.send_message(chat_id, failure_text(job), reply_to=reply_to)
+        api.send_message(chat_id, failure_text(job), **place)
 
 
 def failure_notifier(config: AppConfig, job_dir: Callable[[str], Path]) -> Callable[[JobState], None]:
@@ -68,7 +72,18 @@ def failure_notifier(config: AppConfig, job_dir: Callable[[str], Path]) -> Calla
 # ---- one status message per job, edited in place ---------------------------------
 
 def status_text(job: JobState) -> str:
-    title = (job.source.title if job.source else "") or job.name
+    return f"🎬 {job_title(job)}\n{status_line(job)}"
+
+
+def topic_name(job: JobState) -> str:
+    """The topic list mirrors the status message: its icon, then the product (topic names max 128)."""
+    title = job_title(job)
+    if len(title) > TOPIC_TITLE_MAX:
+        title = title[:TOPIC_TITLE_MAX - 1] + "…"
+    return f"{status_line(job).split(' ', 1)[0]} {title}"
+
+
+def status_line(job: JobState) -> str:
     if job.status == JobStatus.done:
         line = _posted(job) or "✅ Xong"
     elif job.status == JobStatus.failed:
@@ -83,7 +98,7 @@ def status_text(job: JobState) -> str:
         line = "⏳ Đang: Lên lịch TikTok"
     else:
         line = f"⏳ Đang: {STEP_NAMES.get(job.current_step, job.current_step)}"
-    return f"🎬 {title}\n{line}"
+    return line
 
 
 def _posted(job: JobState) -> str:
@@ -104,6 +119,7 @@ class StatusNotifier:
         self._lock = threading.Lock()
         self._last: dict[str, str] = {}
         self._pending: dict[str, str] = {}
+        self._topics: dict[str, str] = {}  # topic name last set per job
         self._wake = threading.Event()
         self._api = None
         if background:
@@ -139,22 +155,43 @@ class StatusNotifier:
     def _deliver(self, job_id: str, text: str) -> None:
         token = self.config.telegram.bot_token
         job = self.store.get(job_id)
-        target = notify_target(job, self.config.telegram)
+        target = self._status_target(job)
         if not token or not target:
             return
         self._api = self._api or self.api_factory(token)
+        self._send_status(job, target, text)
+        self._rename_topic(job)
+
+    def _status_target(self, job: JobState) -> tuple[int, dict] | None:
+        channel = self.config.telegram.channel_id
+        if channel and job.telegram:
+            return channel, {}  # the job's post: the listener links it to its comments
+        return notify_target(job, self.config.telegram)
+
+    def _send_status(self, job: JobState, target: tuple[int, dict], text: str) -> None:
         ref = job.status_message
         if ref:
             try:
                 self._api.edit_text(ref.chat_id, ref.message_id, text)
                 return
             except TelegramApiError as exc:
-                if "not modified" in str(exc):
-                    return
+                if "not found" not in str(exc):
+                    return  # "not modified", or a network blip: no second post; the next change edits again
                 # the message was deleted: start a new one below
-        chat_id, reply_to = target
-        message_id = self._api.send_message(chat_id, text, reply_to=reply_to)
+        chat_id, place = target
+        message_id = self._api.send_message(chat_id, text, **place)
         if message_id is None:
             return
-        self.store.update(job_id, lambda j: setattr(j, "status_message", TelegramMessageRef(chat_id=chat_id,
+        self.store.update(job.id, lambda j: setattr(j, "status_message", TelegramMessageRef(chat_id=chat_id,
                                                                                            message_id=message_id)))
+
+    def _rename_topic(self, job: JobState) -> None:
+        origin, name = job.telegram, topic_name(job)
+        if not origin or not origin.thread_id or self._topics.get(job.id) == name:
+            return
+        try:
+            self._api.edit_forum_topic(origin.chat_id, origin.thread_id, name)
+        except TelegramApiError as exc:
+            if "modified" not in str(exc).lower():  # TOPIC_NOT_MODIFIED: already this name
+                return  # the next change tries again
+        self._topics[job.id] = name

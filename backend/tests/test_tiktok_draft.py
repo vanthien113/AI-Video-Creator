@@ -3,7 +3,7 @@
 import pytest
 
 from app.config import TelegramConfig, TikTokConfig
-from app.job_models import JobState, SourceInfo, TelegramOrigin
+from app.job_models import JobState, SourceInfo, TelegramMessageRef, TelegramOrigin
 from app.steps import tiktok_draft_step
 from app.steps.step_types import StepFailure
 from app.steps.tiktok_draft_step import draft_description, notify_target, run_tiktok_draft
@@ -55,11 +55,16 @@ def test_description_is_claude_caption_when_there_is_one():
     assert draft_description(job(caption="Búp bê nơ mà nhẹ tênh 🎀")) == "Búp bê nơ mà nhẹ tênh 🎀"
 
 
-def test_notify_replies_to_the_link_message_or_messages_the_owner(monkeypatch):
+def test_notify_goes_to_the_post_comments_or_topic_or_link_message_or_owner(monkeypatch):
     monkeypatch.delenv("TELEGRAM_ALLOWED_USER_IDS", raising=False)
     owner = TelegramConfig(allowed_user_ids=[111222333])
-    assert notify_target(job(telegram=TelegramOrigin(chat_id=111, message_id=42)), owner) == (111, 42)
-    assert notify_target(job(), owner) == (111222333, None)
+    assert notify_target(job(telegram=TelegramOrigin(chat_id=111, message_id=42)), owner) == (111, {"reply_to": 42})
+    in_topic = TelegramOrigin(chat_id=111, message_id=42, thread_id=7)
+    assert notify_target(job(telegram=in_topic), owner) == (111, {"thread_id": 7})  # no quote inside the topic
+    comments = TelegramMessageRef(chat_id=-100777, message_id=5)  # the channel post's copy in the discussion group
+    in_channel = TelegramOrigin(chat_id=111, message_id=42, comments=comments)
+    assert notify_target(job(telegram=in_channel), owner) == (-100777, {"reply_to": 5})
+    assert notify_target(job(), owner) == (111222333, {})
     assert notify_target(job(), TelegramConfig()) is None
 
 

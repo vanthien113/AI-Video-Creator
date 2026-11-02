@@ -17,12 +17,17 @@ class LinkJobActions(JobActions):
         super().__init__(store, runner)
         self.config = config
 
+    def open_link_job(self, url: str) -> JobState | None:
+        """The job already waiting or running for this link, if any."""
+        with self.store.lock:
+            return next((job for job in self.store.list()
+                         if job.source and job.source.url == url and job.status not in FINISHED), None)
+
     def create_from_link(self, url: str, telegram: TelegramOrigin | None = None) -> JobState | None:
         """New link job, or None when the same link is already waiting or running."""
         with self.store.lock:
-            for job in self.store.list():
-                if job.source and job.source.url == url and job.status not in FINISHED:
-                    return None
+            if self.open_link_job(url):
+                return None
             auto = self.config.telegram.auto_review
             gates = {g: True for g in GATES} if auto else self.config.review.auto_gates()
             label = "tiktok-" + url.rstrip("/").rsplit("/", 1)[-1].split("?")[0][-20:]
