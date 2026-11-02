@@ -72,7 +72,9 @@ def failure_notifier(config: AppConfig, job_dir: Callable[[str], Path]) -> Calla
 # ---- one status message per job, edited in place ---------------------------------
 
 def status_text(job: JobState) -> str:
-    return f"🎬 {job_title(job)}\n{status_line(job)}"
+    # The link above the title: in a topic or a channel post the user's own link message is out of sight.
+    link = f"🔗 {job.source.url}\n" if job.source and job.source.url else ""
+    return f"{link}🎬 {job_title(job)}\n{status_line(job)}"
 
 
 def topic_name(job: JobState) -> str:
